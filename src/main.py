@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import random
 import glob
+import math
 
 
 def rgbToSingleChannels(image_path):
@@ -147,17 +148,85 @@ def getAllPathsInFolderByType():
     return imagepaths
 
 
+def smoothGrayscaleImage(image, weighted_filter):
+    """
+    Image smoothing with a 3x3 averaging filter
+    
+    Parameters:
+        image(numpy array): the image to be smoothed
+        weighted_filter(numpy array): the weighted filter used to smooth the image
+
+    Returns:
+        image(numpy array): the smoothed image
+    """
+
+    # Getting the dimensions of the image
+    height, width = image.shape
+    image_copy= np.copy(image) # make copy of image
+
+    filter_height, filter_width = weighted_filter.shape # get width and height of filter
+    floor_filter_height = math.floor(filter_height/2)
+    floor_filter_width = math.floor(filter_width/2)
+
+    # Pixels on outer edge of image (those which cause the filter to be off the image) will be ignored
+    # The outer two for loops move the filter central pixel over the image
+    for row in range(floor_filter_height,height-floor_filter_height):
+        for column in range(floor_filter_width,width-floor_filter_width):
+            sum = 0
+            # These two for loops do the averaging within the filters bounds
+            for j in range(-1*floor_filter_width, floor_filter_width+1): # moves across the columns of the filter
+                for i in range(-1*floor_filter_height, floor_filter_height+1): # moves down the rows of the filter
+                    # multiply pixel by its weighting factor from the filter
+                    p = image_copy[row+i][column+j] * weighted_filter[i+floor_filter_height][j+floor_filter_width] 
+                    sum = sum + p # sum all pixels within the neighborhood
+
+            q = round(sum/weighted_filter.sum()) # divide by the number of pixels
+            image[row][column] = q # store averaged pixel back into original image
+
+    return image # return averaged image
+
+
+def createFilterMatrix():
+    """
+    Creates filter matrix from that which is defined in the .env file. Turns matrix into a numpy array.
+
+    Parameters:
+        None
+
+    Returns:
+        array: filter as a 2D numpy array
+    """
+
+    filter = os.getenv('LINEAR_FILTER').splitlines() #split filter on newlines and place in list
+    array = []
+    # Each list item (other than the first) represents a row of the filter matrix    
+    for row in range(1, len(filter)):
+        filter_list = filter[row].split(',')
+        array.append(list(map(int,filter_list))) #build 2D array
+
+    # TODO: width and height of filter should both be odd values (probably should check for this)
+    return np.asarray(array) # return as numpy array
+
+
 if __name__ == "__main__":
     load_dotenv() # parse and load .env file
-    imagepaths = getAllPathsInFolderByType() # get list of filepaths by file extension
-    print(imagepaths)
+    filter = createFilterMatrix()
 
+    imagepaths = getAllPathsInFolderByType() # get list of filepaths by file extension
     red_channel, green_channel, blue_channel, grey_channel = rgbToSingleChannels(imagepaths[0]) #load the image into a numpy array
+
+    averaged_image = smoothGrayscaleImage(grey_channel, filter) # use averaging (smoothing) of a grayscale image
+
     #bin_values, bins = createHistogram(grey_channel)
     #plotHistogram(bin_values, bins)
     #noisy_image = addSaltAndPepperNoise(grey_channel, num_salt_pixels=1000, num_pepper_pixels=1000)
-    noisy_image = addGaussianNoise(grey_channel, std_dev=15)
+    #noisy_image = addGaussianNoise(grey_channel, std_dev=10)
 
     #plt.imsave('cell_images_original\cyl_cells\cyl01_modified.BMP', grey_channel, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
-    plt.imshow(noisy_image, cmap='gray', vmin=0, vmax=255)
+    plt.subplot(1, 2, 1)
+    plt.imshow(averaged_image, cmap='gray', vmin=0, vmax=255)
+    plt.title('Averaged Image')
+    plt.subplot(1, 2, 2)
+    plt.imshow(grey_channel, cmap='gray', vmin=0, vmax=255)
+    plt.title('Original')
     plt.show()
