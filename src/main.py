@@ -1,9 +1,9 @@
 from dotenv import load_dotenv
-from filters import Filters
-from point_operations import ImagePointOperations
-from images import Images
-from noise import Noise
-from histogram import Histogram
+from components.filters import Filters
+from components.point_operations import ImagePointOperations
+from components.images import Images
+from components.noise import Noise
+from components.histogram import Histogram
 
 
 class Main:
