@@ -79,6 +79,10 @@ class Images:
             images(list): list of images to display
             num_rows(int): number of rows to be displayed in plot
             num_cols(int): number of columns to be displayed in plot
+
+        Return:
+        -------
+            None
         """
 
         for i in range(len(images)):

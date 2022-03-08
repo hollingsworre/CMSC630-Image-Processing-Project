@@ -57,9 +57,11 @@ if __name__ == "__main__":
     # show images
     composite.images.showGrayscaleImages([salt_pepper_noise_image, filtered_sp_image], num_rows=1, num_cols=2)
 
-    """
-    #bin_values, bins = createHistogram(grey_channel)
-    #plotHistogram(bin_values, bins)
+    # Create and plot histograms from a list of images
+    composite.histogram_functions.createAndPlotHistograms([grey_channel, salt_pepper_noise_image, filtered_sp_image], num_rows=2, num_cols=2)
+
+
+    #bin_values, bins = createHistogram(grey_channel)   
 
     #plt.imsave('cell_images_original\cyl_cells\cyl01_modified.BMP', grey_channel, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
-     """
+    

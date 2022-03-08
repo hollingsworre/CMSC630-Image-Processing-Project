@@ -11,8 +11,8 @@ class Histogram:
     createHistogram(self,image,bins=255,range=(0, 255))
         Performs histogram calculation (defaults to 255 bins) on a MxN numpy array of pixels with default range 0 to 255
 
-    plotHistogram(bin_values,bins)
-        Plots histogram as a line graph and displays it
+    createAndPlotHistograms(self,images,num_rows=1,num_cols=1)
+        Create and plot histograms of multiple images as line graphs and display them.
     """
 
     def __init__(self):
@@ -37,28 +37,35 @@ class Histogram:
 
         # create the histogram
         bin_values, bins = np.histogram(image, bins, range)
+        print(bins)
         return bin_values, bins
 
 
-    def plotHistogram(bin_values,bins):
+    def createAndPlotHistograms(self,images,num_rows=1,num_cols=1):
         """
-        Plots histogram as a line graph and displays it
+        Create and plot histograms of multiple images as line graphs and display them.
 
         Parameters:
         -----------
-            bin_values: the value of each bin
-            bins: the definition of the bins
+            images(list): list of images to display
+            num_rows(int): number of rows to be displayed in plot
+            num_cols(int): number of columns to be displayed in plot
 
         Returns:
         --------
             None
         """
 
-        plt.figure()
-        plt.title("Image Histogram")
-        plt.xlabel("pixel value")
-        plt.ylabel("pixel count")
-        plt.xlim([0.0, 255.0])
-        plt.plot(bins[0:-1], bin_values)
+        for i in range(len(images)):
+            if i == 4: # only allowed to show four images at once
+                break
+            plt.subplot(num_rows, num_cols, i+1)
+            plt.title(f'Image {i}')
+            #plt.xlabel("pixel value")
+            plt.ylabel("pixel count")
+            plt.xlim([0.0, 255.0])
+            bin_values, bins = self.createHistogram(images[i])
+            plt.plot(bins[0:-1], bin_values)
+
         plt.show()
         
