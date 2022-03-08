@@ -21,9 +21,9 @@ class Noise:
     """
 
     def __init__(self):
-        self.gaussian_noise_strength = os.getenv('GAUSSIAN_NOISE_STRENGTH')
-        self.num_salt_pixels = os.getenv('NUM_SALT_PIXELS')
-        self.num_pepper_pixels = os.getenv('NUM_PEPPER_PIXELS')
+        self.gaussian_noise_strength = int(os.getenv('GAUSSIAN_NOISE_STRENGTH'))
+        self.num_salt_pixels = int(os.getenv('NUM_SALT_PIXELS'))
+        self.num_pepper_pixels = int(os.getenv('NUM_PEPPER_PIXELS'))
     
 
     def addSaltAndPepperNoise(self,image):

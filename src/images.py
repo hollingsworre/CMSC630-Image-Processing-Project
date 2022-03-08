@@ -20,6 +20,9 @@ class Images:
         Loads an RGB image into a numpy array and divides the image into its red, green, blue channels.
         Red, green and blue channels are used to produce a greyscale channel as well using the formula
         grey_channel = .2989*red + .587*green + .114*blue
+
+    showGrayscaleImages(self,images)
+        Display up to four grayscale images at once.
     """
 
     def __init__(self):
@@ -32,9 +35,11 @@ class Images:
         below it by file extension
 
         Parameters:
+        -----------
             None
 
         Returns:
+        --------
             imagepaths(list): the list of filepaths
         """
 
@@ -51,9 +56,11 @@ class Images:
         grey_channel = .2989*red + .587*green + .114*blue
 
         Parameters:
+        -----------
             image_path: the filepath to the image to be opened and parsed into channels
 
         Returns:
+        --------
             red_channel array, green_channel array, blue_channel array, grey_channel array
         """
 
@@ -61,3 +68,24 @@ class Images:
         red_channel, green_channel, blue_channel = img[:,:,0], img[:,:,1], img[:,:,2] #separate three layers of the array into their RGB parts
         grey_channel = np.rint((0.2989 * red_channel) + (0.5870 * green_channel) + (0.1140 * blue_channel)) #use RGB to grayscale conversion formula
         return red_channel, green_channel, blue_channel, grey_channel
+
+
+    def showGrayscaleImages(self,images,num_rows=1,num_cols=1):
+        """
+        Display specified number of grayscale images at once.
+
+        Parameters:
+        -----------
+            images(list): list of images to display
+            num_rows(int): number of rows to be displayed in plot
+            num_cols(int): number of columns to be displayed in plot
+        """
+
+        for i in range(len(images)):
+            if i == 4: # only allowed to show four images at once
+                break
+            plt.subplot(num_rows, num_cols, i+1)
+            plt.imshow(images[i], cmap='gray', vmin=0, vmax=255)
+            plt.title(f'Image {i}')
+
+        plt.show()
