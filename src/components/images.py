@@ -103,7 +103,7 @@ class Images:
 
     def quantizeImage(self,image):
         """
-        Image compression into number of intensity levels the user specifies in the .env file
+        Image compression into number of intensity levels the user specifies in the .env file.
 
         Parameters:
         -----------
@@ -115,8 +115,9 @@ class Images:
         # Flatten the image
         image_list = list(image.flatten())
         # Get range of pixel intensities within the image
-        range = max(image_list)-min(image_list)
-        compression_factor = range/self.compression_level
+        #range = max(image_list)-min(image_list)
+        intensity_range = 255 - 0 # lmax - lmin
+        compression_factor = intensity_range/self.compression_level
         compressed_image_list = []
 
         # compress pixel into it's appropriate new intensity value
@@ -128,11 +129,31 @@ class Images:
         return compressed_image
 
 
-    def decompressImage(self, image):
+    def decompressImage(self, compressed_image):
         """
         Decompress an image that was compressed via the quantizeImage function in this class.
-        In order to decompress, you must know the max - min pixel range from the original.
+        In order to decompress, you must know the max - min pixel range (255 here) from the original
+        as well as the number of bins the original image was compressed down into.
         
-        uncompressed_pixel == (compressed_pixel * compressed_bin_range)/(intensity_range_original_image)
-        """
+        uncompressed_pixel == (compressed_pixel * intensity_range_original_image)/(compressed_bin_range)
 
+        Parameters:
+        -----------
+            compressed_image(numpy array) : the image to decompress
+
+        Returns:
+        --------
+            decompressed_image(numpy array) : the image decompressed
+        """
+        # Flatten the image
+        compressed_image_list = list(compressed_image.flatten())
+        intensity_range = 255 - 0 # lmax - lmin
+        decompressed_image_list = []
+
+        # compress pixel into it's appropriate new intensity value
+        for pixel in compressed_image_list:            
+            decompressed_image_list.append(math.floor((pixel*intensity_range)/self.compression_level))
+
+        decompressed_image = np.reshape(np.asarray(decompressed_image_list), compressed_image.shape)
+
+        return decompressed_image

@@ -35,7 +35,8 @@ if __name__ == "__main__":
 
     """THESE OPERATIONS WILL BE IN FOR LOOP PER IMAGE"""
     # break single image into channels
-    red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(composite.images.imagepaths[0])
+    #current_image_path = composite.images.imagepaths[0]
+    #red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(current_image_path)
 
     # use different filter operations on image
     """ box_image = composite.point_operations.smooth2dImage(grey_channel, composite.filters.box_filter['filter']) # use averaging (smoothing) of a grayscale image
@@ -73,6 +74,17 @@ if __name__ == "__main__":
 
     #plt.imsave('cell_images_original\cyl_cells\cyl01_modified.BMP', grey_channel, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
     
-    # compress image
-    compressed_image = composite.images.quantizeImage(grey_channel)
-    composite.histogram_functions.createAndPlotHistograms([compressed_image],num_bins=64,bin_range=[0,64],num_cols=1,x_axis_limit=63.0)
+    # compress and decompress image
+    """ compressed_image = composite.images.quantizeImage(grey_channel)
+    decompressed_image = composite.images.decompressImage(compressed_image)
+    composite.histogram_functions.createAndPlotHistograms([grey_channel,decompressed_image],num_cols=2)
+    composite.images.showGrayscaleImages([grey_channel, decompressed_image], num_rows=1, num_cols=2)
+    """
+
+    # create histograms and get average of them per cell type
+    for path in composite.images.imagepaths:
+        red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(path)
+        composite.histogram_functions.createHistogram(grey_channel,image_path=path)
+
+    averaged_histograms = composite.histogram_functions.averageHistogramsByType()
+    composite.histogram_functions.plotAveragedHistogramsByType()
