@@ -35,8 +35,8 @@ if __name__ == "__main__":
 
     """THESE OPERATIONS WILL BE IN FOR LOOP PER IMAGE"""
     # break single image into channels
-    #current_image_path = composite.images.imagepaths[0]
-    #red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(current_image_path)
+    current_image_path = composite.images.imagepaths[0]
+    red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(current_image_path)
 
     # use different filter operations on image
     """ box_image = composite.point_operations.smooth2dImage(grey_channel, composite.filters.box_filter['filter']) # use averaging (smoothing) of a grayscale image
@@ -75,16 +75,16 @@ if __name__ == "__main__":
     #plt.imsave('cell_images_original\cyl_cells\cyl01_modified.BMP', grey_channel, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
     
     # compress and decompress image
-    """ compressed_image = composite.images.quantizeImage(grey_channel)
+    compressed_image = composite.images.quantizeImage(grey_channel)
     decompressed_image = composite.images.decompressImage(compressed_image)
     composite.histogram_functions.createAndPlotHistograms([grey_channel,decompressed_image],num_cols=2)
     composite.images.showGrayscaleImages([grey_channel, decompressed_image], num_rows=1, num_cols=2)
-    """
+    equalization_msqe = composite.images.quantizationError(grey_channel, decompressed_image)
 
     # create histograms and get average of them per cell type
-    for path in composite.images.imagepaths:
+    """ for path in composite.images.imagepaths:
         red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(path)
         composite.histogram_functions.createHistogram(grey_channel,image_path=path)
 
     averaged_histograms = composite.histogram_functions.averageHistogramsByType()
-    composite.histogram_functions.plotAveragedHistogramsByType()
+    composite.histogram_functions.plotAveragedHistogramsByType() """

@@ -28,6 +28,9 @@ class Images:
 
     quantizeImage(self,image)
         Image compression into number of bins user specifies in the .env file
+
+    quantizationError(self, original_image, uncompressed_image)
+        Calculates and returns the MSQE for an uncompressed image in comparison to the original
     """
 
     def __init__(self):
@@ -157,3 +160,23 @@ class Images:
         decompressed_image = np.reshape(np.asarray(decompressed_image_list), compressed_image.shape)
 
         return decompressed_image
+
+
+    def quantizationError(self, original_image, uncompressed_image):
+        """
+        Calculates and returns the MSQE for an uncompressed image in comparison to the original
+
+        Parameters:
+        -----------
+            original_image(numpy_array) : the original uncompressed image
+            uncompressed_image(numpy_array) : the image after compression (quantizeImage() function)
+            and decompression (decompressImage() function)
+
+        Returns:
+        --------
+            msqe(float) : the mean square error of the two images
+        """
+
+        # Sum of errors squared divided by image size
+        msqe = (np.square(np.subtract(original_image,uncompressed_image)).sum())/(original_image.size)
+        return msqe
