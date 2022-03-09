@@ -38,7 +38,7 @@ if __name__ == "__main__":
     red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(composite.images.imagepaths[0])
 
     # use different filter operations on image
-    box_image = composite.point_operations.smooth2dImage(grey_channel, composite.filters.box_filter['filter']) # use averaging (smoothing) of a grayscale image
+    """ box_image = composite.point_operations.smooth2dImage(grey_channel, composite.filters.box_filter['filter']) # use averaging (smoothing) of a grayscale image
     print("done box")
     median_image = composite.point_operations.medianOf2dImage(grey_channel, composite.filters.median_filter['filter']) # use median funcion on a grayscale image
     print("done median")
@@ -60,8 +60,14 @@ if __name__ == "__main__":
     # Create and plot histograms from a list of images
     composite.histogram_functions.createAndPlotHistograms([grey_channel, salt_pepper_noise_image, filtered_sp_image], num_rows=2, num_cols=2)
 
+    # Create histogram for individual grayscale image
+    bin_values, bins = composite.histogram_functions.createHistogram(grey_channel) """  
 
-    #bin_values, bins = createHistogram(grey_channel)   
+    # Equalize and display histograms and original vs equalized image
+    equalized_image = composite.histogram_functions.histogramEqualization(grey_channel)
+    composite.images.showGrayscaleImages([grey_channel, equalized_image], num_rows=1, num_cols=2)   
+    composite.histogram_functions.createAndPlotHistograms([grey_channel, equalized_image], num_rows=1, num_cols=2)
+
 
     #plt.imsave('cell_images_original\cyl_cells\cyl01_modified.BMP', grey_channel, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
     
