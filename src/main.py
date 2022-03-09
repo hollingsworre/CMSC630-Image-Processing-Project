@@ -62,12 +62,17 @@ if __name__ == "__main__":
 
     # Create histogram for individual grayscale image
     bin_values, bins = composite.histogram_functions.createHistogram(grey_channel) """  
-
-    # Equalize and display histograms and original vs equalized image
-    equalized_image = composite.histogram_functions.histogramEqualization(grey_channel)
-    composite.images.showGrayscaleImages([grey_channel, equalized_image], num_rows=1, num_cols=2)   
-    composite.histogram_functions.createAndPlotHistograms([grey_channel, equalized_image], num_rows=1, num_cols=2)
-
+    """ 
+    for path in composite.images.imagepaths:
+        red_channel, green_channel, blue_channel, grey_channel = composite.images.rgbToSingleChannels(path)
+        # Equalize and display histograms and original vs equalized image
+        equalized_image = composite.histogram_functions.histogramEqualization(grey_channel)
+        composite.images.showGrayscaleImages([grey_channel, equalized_image], num_rows=1, num_cols=2)   
+        composite.histogram_functions.createAndPlotHistograms([grey_channel, equalized_image], num_rows=1, num_cols=2)
+    """
 
     #plt.imsave('cell_images_original\cyl_cells\cyl01_modified.BMP', grey_channel, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
     
+    # compress image
+    compressed_image = composite.images.quantizeImage(grey_channel)
+    composite.histogram_functions.createAndPlotHistograms([compressed_image],num_bins=64,bin_range=[0,64],num_cols=1,x_axis_limit=63.0)

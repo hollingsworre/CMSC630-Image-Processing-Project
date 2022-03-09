@@ -2,6 +2,7 @@ import os
 import glob
 from matplotlib import pyplot as plt
 import numpy as np
+import math
 
 
 class Images:
@@ -12,6 +13,7 @@ class Images:
     ----------
 
     imagepaths (list) : list of all image paths found which should be loaded and worked on
+    
 
     Methods
     -------
@@ -23,10 +25,14 @@ class Images:
 
     showGrayscaleImages(self,images)
         Display up to four grayscale images at once.
+
+    quantizeImage(self,image)
+        Image compression into number of bins user specifies in the .env file
     """
 
     def __init__(self):
         self.imagepaths = self.getAllPathsInFolderByType()
+        self.compression_level = int(os.getenv('COMPRESSION_LEVEL'))
 
 
     def getAllPathsInFolderByType(self):
@@ -80,7 +86,7 @@ class Images:
             num_rows(int): number of rows to be displayed in plot
             num_cols(int): number of columns to be displayed in plot
 
-        Return:
+        Returns:
         -------
             None
         """
@@ -93,3 +99,40 @@ class Images:
             plt.title(f'Image {i}')
 
         plt.show()
+
+
+    def quantizeImage(self,image):
+        """
+        Image compression into number of intensity levels the user specifies in the .env file
+
+        Parameters:
+        -----------
+            image(numpy array) : the image to compress
+
+        Returns:
+            compressed_image(numpy array) : the image after compression
+        """
+        # Flatten the image
+        image_list = list(image.flatten())
+        # Get range of pixel intensities within the image
+        range = max(image_list)-min(image_list)
+        compression_factor = range/self.compression_level
+        compressed_image_list = []
+
+        # compress pixel into it's appropriate new intensity value
+        for pixel in image_list:            
+            compressed_image_list.append(math.floor(pixel/compression_factor))
+
+        compressed_image = np.reshape(np.asarray(compressed_image_list), image.shape)
+
+        return compressed_image
+
+
+    def decompressImage(self, image):
+        """
+        Decompress an image that was compressed via the quantizeImage function in this class.
+        In order to decompress, you must know the max - min pixel range from the original.
+        
+        uncompressed_pixel == (compressed_pixel * compressed_bin_range)/(intensity_range_original_image)
+        """
+

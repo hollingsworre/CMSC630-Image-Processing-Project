@@ -44,7 +44,7 @@ class Histogram:
         return bin_values, bins
 
 
-    def createAndPlotHistograms(self,images,num_rows=1,num_cols=1):
+    def createAndPlotHistograms(self,images,num_rows=1,num_cols=1,num_bins=256,bin_range=[0,256],x_axis_limit=255.0):
         """
         Create and plot histograms of multiple images as line graphs and display them.
 
@@ -53,6 +53,9 @@ class Histogram:
             images(list): list of images to display
             num_rows(int): number of rows to be displayed in plot
             num_cols(int): number of columns to be displayed in plot
+            num_bins(int): the number of bins for the histogram
+            bin_range(tuple): the range of the bins
+            x_axis_limit(float): limit of the x axis on the plots
 
         Returns:
         --------
@@ -66,8 +69,8 @@ class Histogram:
             plt.title(f'Image {i}')
             #plt.xlabel("pixel value")
             plt.ylabel("pixel count")
-            plt.xlim([0.0, 255.0])
-            bin_values, bins = self.createHistogram(images[i])
+            plt.xlim([0.0, x_axis_limit])
+            bin_values, bins = self.createHistogram(images[i],bins=num_bins,range=bin_range)
             plt.plot(bins[0:-1], bin_values)
 
         plt.show()
