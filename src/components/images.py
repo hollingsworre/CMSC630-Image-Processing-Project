@@ -13,10 +13,19 @@ class Images:
     ----------
 
     imagepaths (list) : list of all image paths found which should be loaded and worked on
-    
+    compression_level (int) : quantization level defined in .env file
+    save_images_path (str) : path to save images to defined in .env file
+
 
     Methods
     -------
+
+    getAllPathsInFolderByType(self)
+        Loads .env PATH_TO_IMAGES variable and IMAGE_EXTENSION variable and gets all filepaths contained within that folder and any folder
+        below it by file extension
+
+    saveImage(self,image)
+        Save image as grayscale
 
     rgbToSingleChannels(self,image_path)
         Loads an RGB image into a numpy array and divides the image into its red, green, blue channels.
@@ -36,6 +45,7 @@ class Images:
     def __init__(self):
         self.imagepaths = self.getAllPathsInFolderByType()
         self.compression_level = int(os.getenv('COMPRESSION_LEVEL'))
+        self.save_images_path = os.getenv('SAVE_IMAGES_PATH')
 
 
     def getAllPathsInFolderByType(self):
@@ -56,6 +66,26 @@ class Images:
         path = os.path.join(os.getenv('PATH_TO_IMAGES'), f'**/*{file_extension}') # load .env path and concat with **/*{file_extension}
         imagepaths = glob.glob(path, recursive=True) # load all .BMP filepaths contained in images_path or any subfolder
         return imagepaths
+
+
+    def saveImage(self,image,image_pathname):
+        """
+        Save image as grayscale
+
+        Parameters:
+        -----------
+            image (numpy array) : image to be saved
+            image_pathname (str) : pathname of image
+
+        Returns:
+        --------
+            None
+        """
+        filename = 'modified_' + os.path.basename(image_pathname)   # extract filename of image from its pathname and add modified_
+        path = os.path.join(self.save_images_path, filename)        # join save path and filename
+
+        plt.imsave(path, image, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
+    
 
 
     def rgbToSingleChannels(self,image_path):

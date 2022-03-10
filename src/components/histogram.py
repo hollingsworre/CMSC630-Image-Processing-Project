@@ -199,7 +199,7 @@ class Histogram:
             None
 
         Returns:
-            averaged_histogram(numpy array) : all averaged histograms for each image type found
+            None
         """
         averaged_histograms = {}
         for i in self.histogram_sums:
@@ -208,8 +208,6 @@ class Histogram:
 
         # Save averaged histograms into class variable
         self.averaged_histograms = averaged_histograms
-
-        return averaged_histograms
 
 
     def plotAveragedHistogramsByType(self,num_rows=2,num_cols=4):
