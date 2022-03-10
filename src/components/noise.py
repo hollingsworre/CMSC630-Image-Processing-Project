@@ -7,6 +7,13 @@ class Noise:
     """
     Component class for all noise functions to be added to the image.
 
+    Attributes
+    ----------
+
+    gaussian_noise_strength(int) : Strength of noise to apply to gaussian function. Loaded from .env file.
+    num_salt_pixels(int) : Number of salt pixels to add as noise. Loaded from .env file.
+    num_pepper_pixels(int) : Number of pepper pixels to add as noise. Loaded from .env file.
+
     Methods
     -------
 

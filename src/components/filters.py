@@ -43,6 +43,18 @@ class Filters:
                 'column_vector': None(if not separable) or numpy array(if separable),
                 'row_vector': None(if not separable) or numpy array(if separable)
             }
+
+    Methods
+    -------
+
+        getFilterMatrix(self,filter)
+            Gets filter matrix from that which is defined in the .env file and converts the string 
+            values into an appropriate numpy array.
+
+        separateFilter(self,filter)
+            Separates a filter of rank 1 (Box or Median usually) into row and column vectors which
+            when multiplied back together will recompose the original filter. This is useful for 
+            image processing convolution.
     """
 
     def __init__(self):

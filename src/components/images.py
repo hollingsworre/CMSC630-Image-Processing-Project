@@ -15,6 +15,7 @@ class Images:
     imagepaths (list) : list of all image paths found which should be loaded and worked on
     compression_level (int) : quantization level defined in .env file
     save_images_path (str) : path to save images to defined in .env file
+    color_spectrum (str) : spectrum of image to work on defined in .env file
 
 
     Methods
@@ -46,6 +47,7 @@ class Images:
         self.imagepaths = self.getAllPathsInFolderByType()
         self.compression_level = int(os.getenv('COMPRESSION_LEVEL'))
         self.save_images_path = os.getenv('SAVE_IMAGES_PATH')
+        self.color_spectrum=os.getenv('COLOR_SPECTRUM').lower()
 
 
     def getAllPathsInFolderByType(self):
@@ -96,17 +98,26 @@ class Images:
 
         Parameters:
         -----------
-            image_path: the filepath to the image to be opened and parsed into channels
+            image_path : the filepath to the image to be opened and parsed into channels
 
         Returns:
         --------
-            red_channel array, green_channel array, blue_channel array, grey_channel array
+            channel (numpy array) : red, green, blue, or grey depending on the color spectrum requested in the .env
+
         """
 
+        channels = {'red':None,'green':None,'blue':None,'grey':None}
+
         img = plt.imread(image_path) #load the image into a numpy array
-        red_channel, green_channel, blue_channel = img[:,:,0], img[:,:,1], img[:,:,2] #separate three layers of the array into their RGB parts
-        grey_channel = np.rint((0.2989 * red_channel) + (0.5870 * green_channel) + (0.1140 * blue_channel)) #use RGB to grayscale conversion formula
-        return red_channel, green_channel, blue_channel, grey_channel
+        channels['red'], channels['green'], channels['blue'] = img[:,:,0], img[:,:,1], img[:,:,2] #separate three layers of the array into their RGB parts
+        channels['grey'] = np.rint((0.2989 * channels['red']) + (0.5870 * channels['green']) + (0.1140 * channels['blue'])) #use RGB to grayscale conversion formula
+        
+        # return requested channel
+        if self.color_spectrum in channels:
+            return channels[self.color_spectrum]
+        # requested channel does not exist so return grey channel
+        else:
+            return channels['grey']
 
 
     def showGrayscaleImages(self,images,num_rows=1,num_cols=1):

@@ -29,7 +29,14 @@ class ImagePointOperations:
         Parameters:
         -----------
             image(numpy array): the image to be smoothed
-            weighted_filter(numpy array): the weighted filter used to smooth the image
+
+            weighted_filter: the weighted filter used to smooth the image::
+
+                dict:{
+                    'filter': numpy matrix,
+                    'column_vector': None(if not separable) or numpy array(if separable),
+                    'row_vector': None(if not separable) or numpy array(if separable)
+                }
 
         Returns:
         --------
@@ -69,7 +76,14 @@ class ImagePointOperations:
         Parameters:
         -----------
             image(numpy array): the image to be smoothed
-            weighted_filter(numpy array): the Laplacian filter used to find differenece within the image
+
+            weighted_filter : the Laplacian filter used to find differenece within the image::
+
+                dict:{
+                        'filter': numpy matrix,
+                        'column_vector': None(if not separable) or numpy array(if separable),
+                        'row_vector': None(if not separable) or numpy array(if separable)
+                    }
 
         Returns:
         --------
@@ -120,7 +134,14 @@ class ImagePointOperations:
         Parameters:
         -----------
             image(numpy array): the image to be worked on
-            weighted_filter(numpy array): the weighted filter used to alter the image
+
+            weighted_filter : the weighted filter used to alter the image::
+
+                dict:{
+                        'filter': numpy matrix,
+                        'column_vector': None(if not separable) or numpy array(if separable),
+                        'row_vector': None(if not separable) or numpy array(if separable)
+                    }
 
         Returns:
         --------
