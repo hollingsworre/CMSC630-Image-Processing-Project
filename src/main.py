@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 import os
+import time
+import multiprocessing
 from components.filters import Filters
 from components.point_operations import ImagePointOperations
 from components.images import Images
@@ -10,6 +12,34 @@ from components.histogram import Histogram
 class Main:
     """
     Composite class made up of all components.
+
+    Attributes
+    ----------
+
+        filters(obj) : filters component plugin instance
+        point_operations(obj) : point_operations component plugin instance
+        images(obj) : images component plugin instance
+        noise_functions(obj) : noise_functions component plugin instance
+        histogram_functions(obj) : histogram component plugin instance
+        timing_results(list) : list for storing timing results of each image operation
+
+
+    Methods
+    -------
+
+        save_data(self, result)
+            Callback method for the process pool started up in self.run_batch_mode().
+            Appends the processing time for the individual process into self.timing_results.
+
+        parallelModel(self, path, kwargs)
+            Method for performing image operations which can be parallelized.
+
+        run_batch_mode(self, **kwargs)
+            Batch mode function. All kwargs arguments from the .env file should be converted to lower case
+            before being passed into this function. If user is requesting an averaged histogram operation then
+            this will be performed synchronously by a single process. Otherwise a process pool equal to the 
+            number of cpus on the machine will be spun up and the filepaths will be distributed to the processes
+            for parallelization. Otherwise it takes a LONG time to process any significant number of images.
     """
 
     def __init__(self):        
@@ -19,50 +49,112 @@ class Main:
         self.images = None
         self.noise_functions = None
         self.histogram_functions = None
+        self.timing_results = []
+
+
+    def save_data(self, result):
+        """
+        Callback method for the process pool started up in self.run_batch_mode().
+        Appends the processing time for the individual process into self.timing_results.
+
+        Parameters:
+        -----------
+            result(float) : processing time for the process
+
+        Returns:
+        --------
+            None
+        """
+        self.timing_results.append(result)
+
+
+    def parallelModel(self, path, kwargs):
+        """
+        Method for performing image operations which can be parallelized.
+
+        Parameters:
+        -----------
+            path(str) : the path of the image
+            kwargs(dict) : the requested functions to be run from the .env file
+
+        Returns:
+        --------
+            processing_time(float) : the processing time for the operation
+        """
+
+        current_process = multiprocessing.Process().name
+        start_time = time.time()
+
+        # get channel defined in .env file
+        requested_channel = self.images.rgbToSingleChannels(path)
+
+        if kwargs['salt_pepper_noise'] == 'true':
+            altered_image = self.noise_functions.addSaltAndPepperNoise(requested_channel)
+        elif kwargs['gaussian_noise'] == 'true':
+            altered_image = self.noise_functions.addGaussianNoise(requested_channel)
+        elif kwargs['equalization'] == 'true':
+            altered_image = self.histogram_functions.histogramEqualization(requested_channel)
+        elif kwargs['quantization'] == 'true':
+            altered_image = self.images.quantizeImage(requested_channel)
+            decompressed_image = self.images.decompressImage(altered_image)
+            equalization_msqe = self.images.quantizationError(requested_channel, decompressed_image)
+            print(f'MSQE = {equalization_msqe}')
+        elif kwargs['box_smoothing'] == 'true':
+            altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.box_filter['filter'])
+            print(f"{current_process} : done box")
+        elif kwargs['gaussian_smoothing'] == 'true':
+            altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.gaussian_filter['filter'])
+            print(f"{current_process} : done gaussian")
+        elif kwargs['laplacian_diff'] == 'true':
+            altered_image = self.point_operations.difference2dImage(requested_channel, self.filters.laplacian_filter['filter'])
+            print(f"{current_process} : done difference")
+        elif kwargs['median_smoothing'] == 'true':
+            altered_image = self.point_operations.medianOf2dImage(requested_channel, self.filters.median_filter['filter'])
+            print(f"{current_process} : done median")
+        
+        if 'altered_image' in locals():
+            self.images.saveImage(altered_image,path)
+
+        return (time.time() - start_time) # return the image processing time 
+
 
     def run_batch_mode(self, **kwargs):
         """
         Batch mode function. All kwargs arguments from the .env file should be converted to lower case
-        before being passed into this function.
+        before being passed into this function. If user is requesting an averaged histogram operation then
+        this will be performed synchronously by a single process. Otherwise a process pool equal to the 
+        number of cpus on the machine will be spun up and the filepaths will be distributed to the processes
+        for parallelization. Otherwise it takes a LONG time to process any significant number of images.
+
+        Parameters:
+        -----------
+            **kwargs : the requested functions to be run from the .env file
+
+        Returns:
+        --------
+            None
         """
 
-        # Go through each imagepath, load the image and perform the requested operation from the .env file
-        for path in self.images.imagepaths:
-            # get channel defined in .env file
-            requested_channel = self.images.rgbToSingleChannels(path)
-
-            if kwargs['salt_pepper_noise'] == 'true':
-                altered_image = self.noise_functions.addSaltAndPepperNoise(requested_channel)
-            elif kwargs['gaussian_noise'] == 'true':
-                altered_image = self.noise_functions.addGaussianNoise(requested_channel)
-            elif kwargs['create_average_histograms'] == 'true':
-                self.histogram_functions.createHistogram(requested_channel,image_path=path)
-            elif kwargs['equalization'] == 'true':
-                altered_image = self.histogram_functions.histogramEqualization(requested_channel)
-            elif kwargs['quantization'] == 'true':
-                altered_image = self.images.quantizeImage(requested_channel)
-                decompressed_image = self.images.decompressImage(altered_image)
-                equalization_msqe = self.images.quantizationError(requested_channel, decompressed_image)
-                print(f'MSQE = {equalization_msqe}')
-            elif kwargs['box_smoothing'] == 'true':
-                altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.box_filter['filter'])
-                print("done box")
-            elif kwargs['gaussian_smoothing'] == 'true':
-                altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.gaussian_filter['filter'])
-                print("done gaussian")
-            elif kwargs['laplacian_diff'] == 'true':
-                altered_image = self.point_operations.difference2dImage(requested_channel, self.filters.laplacian_filter['filter'])
-                print("done difference")
-            elif kwargs['median_smoothing'] == 'true':
-                altered_image = self.point_operations.medianOf2dImage(requested_channel, self.filters.median_filter['filter'])
-                print("done median")
-            
-            if 'altered_image' in locals():
-                self.images.saveImage(altered_image,path)
-
+        # If create_average_histograms, then just perform it synchronously for simplicity's sake.
+        # Every image is looped through, histograms are totaled for each image type and then at
+        # the end they are averaged and plotted. A lot easier than worrying about broadcasting between processes.
         if kwargs['create_average_histograms'] == 'true':
+            for path in self.images.imagepaths:
+                start_time = time.time()
+                requested_channel = self.images.rgbToSingleChannels(path)
+                self.histogram_functions.createHistogram(requested_channel,image_path=path)
+                self.timing_results.append(time.time() - start_time)
             self.histogram_functions.averageHistogramsByType()
             self.histogram_functions.plotAveragedHistogramsByType()
+        # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
+        else:
+            # Create your process pool equal to the number of cpus detected on your machine
+            pool = multiprocessing.Pool(os.cpu_count())
+            # Use imagepaths iterable to dispatch paths to the process pool
+            # Callback is used for storing the time of each image operation for final results at the end
+            _ = [pool.apply_async(self.parallelModel, callback=self.save_data, args=(path, kwargs)) for path in self.images.imagepaths]
+            pool.close()
+            pool.join()
 
 
 if __name__ == "__main__":
@@ -79,6 +171,8 @@ if __name__ == "__main__":
     composite.noise_functions = Noise()
     composite.histogram_functions = Histogram()
 
+    start_time = time.time()
+
     # Pass in environment variables and convert the strings to lower for case insensitive comparisons
     composite.run_batch_mode(salt_pepper_noise=os.getenv('ADD_SALT_AND_PEPPER_NOISE').lower(),
                             gaussian_noise=os.getenv('ADD_GAUSSIAN_NOISE').lower(),
@@ -89,6 +183,12 @@ if __name__ == "__main__":
                             gaussian_smoothing=os.getenv('RUN_LINEAR_GAUSSIAN_SMOOTHING').lower(),
                             laplacian_diff=os.getenv('RUN_LINEAR_LAPLACIAN_DIFFERENCE').lower(),
                             median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower())
+
+    # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
+    # and staying open causes the timer to continue incrementing. Works otherwise.
+    print("\n--- Batch Processing Time: %s seconds ---" % (time.time() - start_time))
+    average_processing_time = sum(composite.timing_results)/len(composite.timing_results)
+    print("--- Processing Time Per Image: %s seconds ---\n" % (average_processing_time))
 
     # display up to four images at once
     #composite.images.showGrayscaleImages([salt_pepper_noise_image, filtered_sp_image], num_rows=1, num_cols=2)
