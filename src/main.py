@@ -22,6 +22,7 @@ class Main:
         noise_functions(obj) : noise_functions component plugin instance
         histogram_functions(obj) : histogram component plugin instance
         timing_results(list) : list for storing timing results of each image operation
+        msqe_results(list) : list for storing msqe numbers per image
 
 
     Methods
@@ -50,6 +51,7 @@ class Main:
         self.noise_functions = None
         self.histogram_functions = None
         self.timing_results = []
+        self.msqe_results = []
 
 
     def save_data(self, result):
@@ -59,13 +61,15 @@ class Main:
 
         Parameters:
         -----------
-            result(float) : processing time for the process
+            result(array) : [processing time for the process, msqe for the quantization]
 
         Returns:
         --------
             None
         """
-        self.timing_results.append(result)
+        self.timing_results.append(result[0])
+        if result[1] != 0:
+            self.msqe_results.append(result[1])
 
 
     def parallelModel(self, path, kwargs):
@@ -80,8 +84,10 @@ class Main:
         Returns:
         --------
             processing_time(float) : the processing time for the operation
+            equalization_msqe(float) : the msqe for the quantization
         """
 
+        equalization_msqe = 0
         current_process = multiprocessing.Process().name
         start_time = time.time()
 
@@ -98,7 +104,6 @@ class Main:
             altered_image = self.images.quantizeImage(requested_channel)
             decompressed_image = self.images.decompressImage(altered_image)
             equalization_msqe = self.images.quantizationError(requested_channel, decompressed_image)
-            print(f'MSQE = {equalization_msqe}')
         elif kwargs['box_smoothing'] == 'true':
             altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.box_filter['filter'])
             print(f"{current_process} : done box")
@@ -115,7 +120,8 @@ class Main:
         if 'altered_image' in locals():
             self.images.saveImage(altered_image,path)
 
-        return (time.time() - start_time) # return the image processing time 
+        # return the image processing time and equalization_msqe
+        return [time.time() - start_time, equalization_msqe]
 
 
     def run_batch_mode(self, **kwargs):
@@ -187,8 +193,13 @@ if __name__ == "__main__":
     # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
     # and staying open causes the timer to continue incrementing. Works otherwise.
     print("\n--- Batch Processing Time: %s seconds ---" % (time.time() - start_time))
+    
     average_processing_time = sum(composite.timing_results)/len(composite.timing_results)
     print("--- Processing Time Per Image: %s seconds ---\n" % (average_processing_time))
+    
+    if composite.msqe_results:
+        average_msqe = sum(composite.msqe_results)/len(composite.msqe_results)
+        print("--- Average MSQE: %s ---\n" % (average_msqe))
 
     # display up to four images at once
     #composite.images.showGrayscaleImages([salt_pepper_noise_image, filtered_sp_image], num_rows=1, num_cols=2)
