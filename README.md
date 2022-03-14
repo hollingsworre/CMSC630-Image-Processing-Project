@@ -21,7 +21,7 @@ Testing was done on a Windows 11 based Dell XPS 15 with an 11th Gen Intel(R) Cor
 ## :nut_and_bolt: Dealing With The Code
 
 <img
-    src="images/design_structure.png"
+    src="assets/design_structure.png"
     alt="Alt text"
     title="Class Structure">
 
