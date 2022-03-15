@@ -1,6 +1,9 @@
 import math
 import numpy as np
+from numba import jit
 
+
+# TODO: Time around the outside of the image that the filter does not touch
 
 class ImagePointOperations:
     """
@@ -22,9 +25,13 @@ class ImagePointOperations:
     def __init__(self):
         pass
 
-    def smooth2dImage(self,image,weighted_filter):
+
+    @staticmethod
+    @jit(nopython=True,cache=True)
+    def smooth2dImage(image,weighted_filter):
         """
-        2D Image smoothing with a user specified (via .env file) averaging filter (Box or Gaussian)
+        2D Image smoothing with a user specified (via .env file) averaging filter (Box or Gaussian). Declared
+        as a static method with no self object so that numba can be used for just in time compilation.
         
         Parameters:
         -----------
@@ -69,9 +76,12 @@ class ImagePointOperations:
         return image_copy # return averaged image
 
 
-    def difference2dImage(self,image,weighted_filter):
+    @staticmethod
+    @jit(nopython=True,cache=True)
+    def difference2dImage(image,weighted_filter):
         """
-        2D Image difference with a user specified (via .env file) Laplacian filter
+        2D Image difference with a user specified (via .env file) Laplacian filter. Declared
+        as a static method with no self object so that numba can be used for just in time compilation.
         
         Parameters:
         -----------
@@ -127,9 +137,12 @@ class ImagePointOperations:
         return image_copy # return altered image
 
 
-    def medianOf2dImage(self,image,weighted_filter):
+    @staticmethod
+    @jit(nopython=True,cache=True)
+    def medianOf2dImage(image,weighted_filter):
         """
-        2D Image median with a user specified (via .env file) median filter
+        2D Image median with a user specified (via .env file) median filter. Declared
+        as a static method with no self object so that numba can be used for just in time compilation.
         
         Parameters:
         -----------

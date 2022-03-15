@@ -5,6 +5,13 @@ Development was done in Visual Studio Code with Python version 3.10.0.
 
 Testing was done on a Windows 11 based Dell XPS 15 with an 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz 16 core processor and 32 GB of RAM.
 
+Python's Multiprocessing library is used to create a process pool equal to the number of cpus detected on the system. The images are distributed evenly amongst the processes after that.
+
+The just in time compilation library [Numba](https://numba.readthedocs.io/en/stable/user/overview.html) is also used for the point filtering operations. This library compiles the filtering functions into C executables at run time, thus providing an order of magnitude speedup (see below) for these cpu bound numpy based operations.
+
+    Numba based median filtering batch processing with parallelization = 58.3 seconds
+    Basic median filtering batch processing time with parallelization = 691.6 seconds 
+
 ## :card_index_dividers: Files
 - *src*: Folder containing all source code for the project.
 - *src/.env*: The environment file which can be altered for running the code in various setup configurations.
