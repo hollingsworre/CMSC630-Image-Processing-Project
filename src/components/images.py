@@ -25,12 +25,13 @@ class Images:
         Loads .env PATH_TO_IMAGES variable and IMAGE_EXTENSION variable and gets all filepaths contained within that folder and any folder
         below it by file extension
 
-    saveImage(self,image)
-        Save image as grayscale
+    saveImage(self,image,cmap='gray')
+        Save image as grayscale or color
 
-    rgbToSingleChannels(self,image_path)
-        Loads an RGB image into a numpy array and divides the image into its red, green, blue channels.
-        Red, green and blue channels are used to produce a greyscale channel as well using the formula
+    getImage(self,image_path)
+        Loads an RGB image into a numpy array and returns it if color_spectrume set to RGB. Else it
+        divides the image into its red, green, blue channels. Red, green and blue channels are used
+        to produce a greyscale channel as well using the formula
         grey_channel = .2989*red + .587*green + .114*blue
 
     showGrayscaleImages(self,images)
@@ -70,7 +71,7 @@ class Images:
         return imagepaths
 
 
-    def saveImage(self,image,image_pathname):
+    def saveImage(self,image,image_pathname,cmap='gray'):
         """
         Save image as grayscale
 
@@ -78,6 +79,7 @@ class Images:
         -----------
             image (numpy array) : image to be saved
             image_pathname (str) : pathname of image
+            cmap (str) : color map (gray or rgb) to save image as (defaults to gray)
 
         Returns:
         --------
@@ -86,14 +88,20 @@ class Images:
         filename = 'modified_' + os.path.basename(image_pathname)   # extract filename of image from its pathname and add modified_
         path = os.path.join(self.save_images_path, filename)        # join save path and filename
 
-        plt.imsave(path, image, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
+        if cmap == 'gray':
+            plt.imsave(path, image, cmap=cmap, vmin=0, vmax=255) #Save back grayscale image
+        elif cmap == 'rgb':
+            # have to normalize image values between 0 and 1 to save as rgb
+            plt.imsave(path, (image - np.min(image)) / (np.max(image) - np.min(image))) #Save back rgb image
+        else:
+            print('Failed to save image! cmap should be gray or rgb')
     
 
-
-    def rgbToSingleChannels(self,image_path):
+    def getImage(self,image_path):
         """
-        Loads an RGB image into a numpy array and divides the image into its red, green, blue channels.
-        Red, green and blue channels are used to produce a greyscale channel as well using the formula
+        Loads an RGB image into a numpy array and returns it if color_spectrume set to RGB. Else it
+        divides the image into its red, green, blue channels. Red, green and blue channels are used
+        to produce a greyscale channel as well using the formula
         grey_channel = .2989*red + .587*green + .114*blue
 
         Parameters:
@@ -109,6 +117,11 @@ class Images:
         channels = {'red':None,'green':None,'blue':None,'grey':None}
 
         img = plt.imread(image_path) #load the image into a numpy array
+
+        # return image as RGB
+        if self.color_spectrum == 'rgb':
+            return img
+
         channels['red'], channels['green'], channels['blue'] = img[:,:,0], img[:,:,1], img[:,:,2] #separate three layers of the array into their RGB parts
         channels['grey'] = np.rint((0.2989 * channels['red']) + (0.5870 * channels['green']) + (0.1140 * channels['blue'])) #use RGB to grayscale conversion formula
         

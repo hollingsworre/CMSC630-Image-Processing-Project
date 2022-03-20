@@ -7,6 +7,7 @@ from components.point_operations import ImagePointOperations
 from components.images import Images
 from components.noise import Noise
 from components.histogram import Histogram
+from components.segmentation import Segmentation
 
 
 class Main:
@@ -50,6 +51,7 @@ class Main:
         self.images = None
         self.noise_functions = None
         self.histogram_functions = None
+        self.segmentation = None
         self.timing_results = []
         self.msqe_results = []
 
@@ -92,7 +94,7 @@ class Main:
         start_time = time.time()
 
         # get channel defined in .env file
-        requested_channel = self.images.rgbToSingleChannels(path)
+        requested_channel = self.images.getImage(path)
 
         if kwargs['salt_pepper_noise'] == 'true':
             altered_image = self.noise_functions.addSaltAndPepperNoise(requested_channel)
@@ -118,7 +120,7 @@ class Main:
             print(f"{current_process} : done median")
         
         if 'altered_image' in locals():
-            self.images.saveImage(altered_image,path)
+            self.images.saveImage(altered_image,path) # save image as grayscale
 
         # return the image processing time and equalization_msqe
         return [time.time() - start_time, equalization_msqe]
@@ -147,11 +149,19 @@ class Main:
         if kwargs['create_average_histograms'] == 'true':
             for path in self.images.imagepaths:
                 start_time = time.time()
-                requested_channel = self.images.rgbToSingleChannels(path)
+                requested_channel = self.images.getImage(path)
                 self.histogram_functions.createHistogram(requested_channel,image_path=path)
                 self.timing_results.append(time.time() - start_time)
             self.histogram_functions.averageHistogramsByType()
             self.histogram_functions.plotAveragedHistogramsByType()
+        # segment image synchronously
+        elif kwargs['k_means'] == 'true':
+            for path in self.images.imagepaths:
+                start_time = time.time()
+                image = self.images.getImage(path)
+                segmented_image = self.segmentation.k_means_segmentation(image)
+                self.timing_results.append(time.time() - start_time)
+                self.images.saveImage(segmented_image,path,cmap='rgb')
         # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
         else:
             # Create your process pool equal to the number of cpus detected on your machine
@@ -176,6 +186,7 @@ if __name__ == "__main__":
     composite.images = Images()
     composite.noise_functions = Noise()
     composite.histogram_functions = Histogram()
+    composite.segmentation = Segmentation()
 
     start_time = time.time()
 
@@ -188,7 +199,8 @@ if __name__ == "__main__":
                             box_smoothing=os.getenv('RUN_LINEAR_BOX_SMOOTHING').lower(),
                             gaussian_smoothing=os.getenv('RUN_LINEAR_GAUSSIAN_SMOOTHING').lower(),
                             laplacian_diff=os.getenv('RUN_LINEAR_LAPLACIAN_DIFFERENCE').lower(),
-                            median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower())
+                            median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower(),
+                            k_means=os.getenv('K_MEANS_SEGMENTATION').lower())
 
     # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
     # and staying open causes the timer to continue incrementing. Works otherwise.
