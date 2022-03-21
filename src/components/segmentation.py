@@ -5,27 +5,57 @@ from numba import jit
 
 
 @jit(nopython=True,cache=True)
-def assign_pixel(pixel,cluster_centers,num_cluster_centers):
+def map_pixels(image_flat,cluster_centers,pixel_mapping_temp,num_cluster_centers,num_image_rows):
     """
-    Assigns pixel to a cluster by taking a 1x3 pixel and calculating the distance between every cluster center.
+    Maps all image pixels to a cluster by taking a 1x3 pixel and calculating the distance between every cluster center.
     Appends pixels location to the cluster it has minimum distance to.
-    """
-    
-    distances = []
 
-    for i in range(num_cluster_centers):
-        # calculating Euclidean distance for the pixel against each cluster
-        distances.append(np.linalg.norm(pixel - cluster_centers[i]))
+    Parameters:
+    -----------
+
+        image_flat (numpy array) : the 3D flattened image to calculate the distances over
+        cluster_centers (numpy array) : array of all cluster centroids
+        pixel_mapping_temp (numpy array) : the mapping of pixel to centroid. This array is passed and changed by reference.
+        num_cluster_centers (int) : the number of clusters
+        num_image_rows (int) : the length of image_flat which is equal to the number of pixels in the image
+
+    Returns:
+    --------
         
-    # return index of minimum distance (this will be the cluster that pixel belongs to)
-    return distances.index(min(distances)) 
+        None
+    """
+
+    # For every pixel in the image
+    for i in range(num_image_rows):
+        distances = []
+        # For every cluster calculate which one the pixel is closest to
+        for j in range(num_cluster_centers):
+            # calculating Euclidean distance for the pixel against each cluster
+            distances.append(np.linalg.norm(image_flat[i][:] - cluster_centers[j]))
+        # For every pixel map to which cluster it belongs based on which one it is closest to
+        pixel_mapping_temp[i] = distances.index(min(distances))
 
 
 @jit(nopython=True,cache=True)
 def recalculate_cluster_centers(image_flat,cluster_centers,pixel_to_cluster_mapping,num_cluster_centers,num_image_rows):
     """
-    Recalculate cluster centers based off of average of pixel values that are assigned to the cluster.
-    This cluster to pixel assignment is containe in the pixel_to_cluster_mapping array.
+    Recalculate cluster centers by averaging of all pixel values that are assigned to the cluster.
+    This cluster to pixel assignment is contained in the pixel_to_cluster_mapping array. Cluster
+    centers are then moved to their new centers of gravity. cluster_centers is passed and changed by reference.
+
+    Parameters:
+    -----------
+
+        image_flat (numpy array) : the 3D flattened image
+        cluster_centers (numpy array) : array of all cluster centroids. Passed and changed by reference.
+        pixel_to_cluster_mapping (numpy array) : the mapping of pixel to centroid.
+        num_cluster_centers (int) : the number of clusters
+        num_image_rows (int) : the length of image_flat which is equal to the number of pixels in the image
+
+    Returns:
+    --------
+         
+        None
     """      
     
     # Calculate every new cluster center
@@ -48,7 +78,23 @@ def recalculate_cluster_centers(image_flat,cluster_centers,pixel_to_cluster_mapp
 
 @jit(nopython=True,cache=True)
 def segment_image(image_flat,cluster_centers,pixel_to_cluster_mapping,num_cluster_centers,num_image_rows):
-    """Perform pixel assignments to appropriate cluster"""
+    """
+    Perform pixel assignments to appropriate cluster once all pixels are assigned.
+
+    Parameters:
+    -----------
+
+        image_flat (numpy array) : the 3D flattened image
+        cluster_centers (numpy array) : array of all cluster centroids
+        pixel_to_cluster_mapping (numpy array) : the mapping of pixel to centroid.
+        num_cluster_centers (int) : the number of clusters
+        num_image_rows (int) : the length of image_flat which is equal to the number of pixels in the image
+
+    Returns:
+    --------
+
+        None
+    """
 
     # Calculate every new cluster center
     for i in range(num_cluster_centers):            
@@ -58,21 +104,21 @@ def segment_image(image_flat,cluster_centers,pixel_to_cluster_mapping,num_cluste
                 image_flat[j][:] = cluster_centers[i][:]
 
 
-
 class Segmentation:
     """
-    Component class for all segmentation techniques.
+    Component class for segmentation techniques. Uses functions outside of this class which can be just in time
+    compiled by Numba. This provides a huge speed boost for these numpy based operations.
 
     Attributes
     ----------
 
     num_cluster_centers(int) : The number of cluster centers to use for K-means segmentation. Loaded from .env file.
     
-
     Methods
     -------
 
-    
+    k_means_segmentation(self,image)
+        K-means segmentation algorithm for an RGB image. Implemented as a wrapper for Numba compiled non-class methods.
 
     """
 
@@ -83,6 +129,16 @@ class Segmentation:
     def k_means_segmentation(self,image):
         """
         K-means segmentation algorithm for an RGB image.
+
+        Parameters:
+        -----------
+
+            image (numpy array) : 3D rgb image
+
+        Returns:
+        --------
+
+            image (numpy array) : the segmented image as a 3D numpy array
         """
 
         image_copy = np.copy(image) # make copy of image
@@ -108,10 +164,9 @@ class Segmentation:
 
         # Perform K-means segmentation. Loop as long as pixels are being reassigned to clusters.
         while pixel_changed_cluster_flag:
-            # Loop through every pixel and assign it to a cluster from [0 : self.num_cluster_centers-1]
-            for i in range(num_image_rows):
-                pixel_mapping_temp[i] = assign_pixel(image_flat[i][:],cluster_centers,self.num_cluster_centers) # send pixel and cluster_centers for min dist calc
-                
+            # pixel_mapping_temp numpy array passed by reference 
+            map_pixels(image_flat,cluster_centers,pixel_mapping_temp,self.num_cluster_centers,num_image_rows)
+
             # Check if any pixels changed clusters
             comparison = pixel_to_cluster_mapping == pixel_mapping_temp        
             if comparison.all():
@@ -127,4 +182,3 @@ class Segmentation:
         # Reassign image pixel values to the cluster centroid values
         segment_image(image_flat,cluster_centers,pixel_to_cluster_mapping,self.num_cluster_centers,num_image_rows)
         return np.reshape(np.rint(image_flat),image.shape)
-

@@ -9,6 +9,11 @@ class ImagePointOperations:
     """
     Component class for all image point operations available to work with.
 
+    Attributes:
+    -----------
+
+    None
+
     Methods:
     --------
 
