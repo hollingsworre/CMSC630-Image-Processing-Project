@@ -162,6 +162,15 @@ class Main:
                 segmented_image = self.segmentation.k_means_segmentation(image)
                 self.timing_results.append(time.time() - start_time)
                 self.images.saveImage(segmented_image,path,cmap='rgb')
+        # segment image synchronously
+        elif kwargs['histogram_thresholding'] == 'true':
+            for path in self.images.imagepaths:
+                start_time = time.time()
+                requested_channel = self.images.getImage(path)
+                bin_values, bins = self.histogram_functions.createHistogram(requested_channel,image_path=path)
+                segmented_image = self.segmentation.histogram_thresholding_segmentation(requested_channel,bin_values,bins)
+                self.timing_results.append(time.time() - start_time)
+                self.images.saveImage(segmented_image,path)
         # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
         else:
             # Create your process pool equal to the number of cpus detected on your machine
@@ -200,7 +209,8 @@ if __name__ == "__main__":
                             gaussian_smoothing=os.getenv('RUN_LINEAR_GAUSSIAN_SMOOTHING').lower(),
                             laplacian_diff=os.getenv('RUN_LINEAR_LAPLACIAN_DIFFERENCE').lower(),
                             median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower(),
-                            k_means=os.getenv('K_MEANS_SEGMENTATION').lower())
+                            k_means=os.getenv('K_MEANS_SEGMENTATION').lower(),
+                            histogram_thresholding=os.getenv('HISTOGRAM_THRESHOLDING').lower())
 
     # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
     # and staying open causes the timer to continue incrementing. Works otherwise.
