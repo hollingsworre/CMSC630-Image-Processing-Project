@@ -2,7 +2,6 @@ import numpy as np
 import random
 import os
 from numba import jit
-import math
 
 
 @jit(nopython=True,cache=True)
@@ -228,9 +227,6 @@ class Segmentation:
                     mean_o = mean_o + ((j*P_j)/p_o)
                     variance_o = variance_o + (((j-mean_o)**2)*P_j/p_o)
 
-                if math.isnan(variance_o):
-                    variance_o = 0
-
             # From Threshold+1 to 255
             for k in range(threshold+1,len(bins)-1):
                 P_k = bin_values[k]/num_pixels
@@ -241,9 +237,6 @@ class Segmentation:
                 else:
                     mean_b = mean_b + ((k*P_k)/p_b)
                     variance_b = variance_b + (((k-mean_b)**2)*P_k/p_b)
-                
-                if math.isnan(variance_b):
-                    variance_b = 0
         
             group_variance = variance_o*p_o + variance_b*p_b
             within_group_variance.append(group_variance)
