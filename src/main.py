@@ -8,6 +8,7 @@ from components.images import Images
 from components.noise import Noise
 from components.histogram import Histogram
 from components.segmentation import Segmentation
+from components.edges import Edges
 
 
 class Main:
@@ -22,6 +23,8 @@ class Main:
         images(obj) : images component plugin instance
         noise_functions(obj) : noise_functions component plugin instance
         histogram_functions(obj) : histogram component plugin instance
+        segmentation(obj) : segmentation component plugin instance
+        edges(obj) : edge detection component plugin instance
         timing_results(list) : list for storing timing results of each image operation
         msqe_results(list) : list for storing msqe numbers per image
 
@@ -52,6 +55,7 @@ class Main:
         self.noise_functions = None
         self.histogram_functions = None
         self.segmentation = None
+        self.edges = None
         self.timing_results = []
         self.msqe_results = []
 
@@ -171,6 +175,15 @@ class Main:
                 segmented_image = self.segmentation.histogram_thresholding_segmentation(requested_channel,bin_values,bins)
                 self.timing_results.append(time.time() - start_time)
                 self.images.saveImage(segmented_image,path)
+        elif kwargs['sobel_edge_detection'] == 'true':
+            for path in self.images.imagepaths:
+                start_time = time.time()
+                grey_channel = self.images.getImage(path)
+                # Smooth image with gaussian filter before doing edge detection
+                smoothed_image = self.point_operations.smooth2dImage(grey_channel, self.filters.gaussian_filter['filter'])
+                image_magnitude = self.edges.sobel_edge_detection(smoothed_image,threshold=2.8)
+                self.timing_results.append(time.time() - start_time)
+                self.images.saveImage(image_magnitude,path)
         # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
         else:
             # Create your process pool equal to the number of cpus detected on your machine
@@ -196,6 +209,7 @@ if __name__ == "__main__":
     composite.noise_functions = Noise()
     composite.histogram_functions = Histogram()
     composite.segmentation = Segmentation()
+    composite.edges = Edges()
 
     start_time = time.time()
 
@@ -210,7 +224,8 @@ if __name__ == "__main__":
                             laplacian_diff=os.getenv('RUN_LINEAR_LAPLACIAN_DIFFERENCE').lower(),
                             median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower(),
                             k_means=os.getenv('K_MEANS_SEGMENTATION').lower(),
-                            histogram_thresholding=os.getenv('HISTOGRAM_THRESHOLDING').lower())
+                            histogram_thresholding=os.getenv('HISTOGRAM_THRESHOLDING').lower(),
+                            sobel_edge_detection = os.getenv('RUN_SOBEL_EDGE_DETECTION').lower())
 
     # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
     # and staying open causes the timer to continue incrementing. Works otherwise.

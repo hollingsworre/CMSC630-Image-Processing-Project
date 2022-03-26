@@ -3,8 +3,6 @@ import numpy as np
 from numba import jit
 
 
-# TODO: Time around the outside of the image that the filter does not touch
-
 class ImagePointOperations:
     """
     Component class for all image point operations available to work with.
@@ -78,7 +76,8 @@ class ImagePointOperations:
                 # divide by the number of pixels and store into image copy
                 image_copy[row][column] = round(sum/weighted_filter.sum())
 
-        return image_copy # return averaged image
+        # Remove outer edge of image equivalent to filter size
+        return image_copy[floor_filter_height:height-floor_filter_height,floor_filter_width:width-floor_filter_width] # return averaged image
 
 
     @staticmethod
@@ -139,7 +138,8 @@ class ImagePointOperations:
                 # take differenece of positive and negative coefficients and store into image copy
                 image_copy[row][column] = round(sum_positive-sum_negative)
 
-        return image_copy # return altered image
+        # Remove outer edge of image equivalent to filter size
+        return image_copy[floor_filter_height:height-floor_filter_height,floor_filter_width:width-floor_filter_width] # return altered image
 
 
     @staticmethod
@@ -193,4 +193,5 @@ class ImagePointOperations:
                 pixel_list.sort() # sort list of pixels
                 image_copy[row][column] = pixel_list[median_index] # store weighted median pixel back into image copy
 
-        return image_copy # return averaged image
+        # Remove outer edge of image equivalent to filter size
+        return image_copy[floor_filter_height:height-floor_filter_height,floor_filter_width:width-floor_filter_width] # return averaged image
