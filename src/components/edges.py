@@ -52,30 +52,21 @@ class Edges:
         # The outer two for loops move the filter central pixel over the image
         for row in range(1,height-1):
             for column in range(1,width-1):
-                sum_x = 0
-                sum_y = 0
-                # These two for loops do the averaging within the filters bounds
-                for j in range(-1, 2): # moves across the columns of the filter
-                    for i in range(-1, 2): # moves down the rows of the filter
-                        # multiply pixel by its weighting factor from the x filter
-                        pixel_x = image[row+i][column+j] * Hx[i+1][j+1]
-                        # multiply pixel by its weighting factor from the y filter
-                        pixel_y = image[row+i][column+j] * Hy[i+1][j+1]
-                        sum_x = sum_x + pixel_x # sum all pixels within the neighborhood for x gradient
-                        sum_y = sum_y + pixel_y # sum all pixels within the neighborhood for y gradient
-
-                # divide by the division factor and store into x image copy
-                x_image_copy[row][column] = round(sum_x/sobel_division_factor)
+                # Multiply kernel times image patch the hot point is over and sum the elements
+                x_image_copy[row][column] = np.sum(Hx*image[row-1:row+2,column-1:column+2])
                 # divide by the division factor and store into y image copy
-                y_image_copy[row][column] = round(sum_y/sobel_division_factor)
+                y_image_copy[row][column] = np.sum(Hy*image[row-1:row+2,column-1:column+2])
+
+        # divide by the division factor
+        x_image_copy = x_image_copy/sobel_division_factor
+        # divide by the division factor
+        y_image_copy = y_image_copy/sobel_division_factor
 
         # Calculate gradient magnitude from x and y derivatives
         gradient_magnitude = np.sqrt(np.square(x_image_copy) + np.square(y_image_copy))
 
-        # Matrix for the edges
-        gradient_edges = np.copy(gradient_magnitude)
-
-        
+        # Matrix for storing the edges
+        gradient_edges = np.copy(gradient_magnitude)        
 
         # Mark edges if its magnitude is a maxima in a given direction (3x3 area)
         # Start at 2 because outer edge of pixels was never run over by the derivative filter
@@ -84,12 +75,14 @@ class Edges:
                 hot_point = gradient_magnitude[row][column] # pixel being evaluated
                 # check x direction maxima
                 if max(gradient_magnitude[row-1][column],hot_point,gradient_magnitude[row+1][column]) == hot_point:
+                    # if maxima is greater than threshold then mark as edge
                     if hot_point > threshold:
                         gradient_edges[row][column] = 0 # mark as an edge
                     else:
                         gradient_edges[row][column] = 255 # mark as not an edge                    
                 # check y direction maxima
                 elif max(gradient_magnitude[row][column-1],hot_point,gradient_magnitude[row][column+1]) == hot_point:
+                    # if maxima is greater than threshold then mark as edge
                     if hot_point > threshold:
                         gradient_edges[row][column] = 0 # mark as an edge
                     else:
@@ -97,6 +90,38 @@ class Edges:
                 else:
                     gradient_edges[row][column] = 255 # mark as not an edge
                     
-        # return gradient edges with two out layers sliced out
+        # return gradient edges with two outer layers sliced out
         return gradient_edges[2:height-2,2:width-2]
         
+
+    @staticmethod
+    @jit(nopython=True,cache=True)
+    def edge_dilation(image_edges, num_layers=1):
+        # structuring element                                        
+        structuring_element = np.array([[True,False,True],
+                                        [False,True,False],
+                                        [True,False,True]])
+
+        # get size of image
+        height, width = image_edges.shape
+        # copy image_edges
+        image_edges_copy = np.copy(image_edges)
+        edge_dilation_temp = np.copy(image_edges)  
+
+        # Add number of specified layers
+        for _ in range(num_layers):
+            # go through every pixel of image
+            # replace black pixel (intensity == 0) with the structuring element
+            for row in range(1,height-1):
+                for column in range(1,width-1):
+                    # if over an edge pixel apply the structuring element to it (intensity 0 == black)
+                    if image_edges_copy[row][column] == 0:
+                        # apply structuring element for edge dilation
+                        # numpy.where() iterates over the structuring element bool array
+                        # and for every True it yields corresponding element from the first list (0 == for a black edge pixel)
+                        # and for every False it yields corresponding element from the second list
+                        edge_dilation_temp[row-1:row+2,column-1:column+2] = np.where(structuring_element, np.zeros((3,3)), image_edges_copy[row-1:row+2,column-1:column+2])
+                        
+            image_edges_copy = np.copy(edge_dilation_temp) # copy over in preparation for adding another layer
+
+        return image_edges_copy
