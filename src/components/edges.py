@@ -99,7 +99,7 @@ class Edges:
     @jit(nopython=True,cache=True)
     def edge_dilation(image_edges, num_layers=1):
         """
-        Perform dilation of an edge (black and white, eg 0 or 255) based image
+        Perform dilation of an edge (black and white, eg 0 or 255) based image.
         """
 
         # Quasi-Disk shaped structuring elements                                     
@@ -144,5 +144,53 @@ class Edges:
                                                                                                                                                                             image_edges_copy[row-floor_structure_height:row+floor_structure_height+1,column-floor_structure_width:column+floor_structure_width+1])
                         
             image_edges_copy = np.copy(edge_dilation_temp) # copy over in preparation for adding another layer
+
+        return image_edges_copy
+
+
+    @staticmethod
+    @jit(nopython=True,cache=True)
+    def edge_erosion(image_edges, num_layers=1):
+        """
+        Perform edge erosion of an edge based image.
+        """
+
+        structuring_element = np.array([[False,True,False],
+                                        [True,True,True],
+                                        [False,True,False]])
+
+        structure_height, structure_width = structuring_element.shape
+        floor_structure_height = math.floor(structure_height/2)
+        floor_structure_width = math.floor(structure_width/2)
+
+        # get size of image
+        height, width = image_edges.shape
+        # copy image_edges
+        image_edges_copy = np.copy(image_edges)
+        edge_erosion_temp = np.copy(image_edges)
+
+        # Remove number of specified layers
+        for _ in range(num_layers):
+            # go through every pixel of image
+            for row in range(floor_structure_height,height-floor_structure_height):
+                for column in range(floor_structure_width,width-floor_structure_width):
+                    # if over an edge pixel apply the structuring element to it (intensity 0 == black)
+                    if image_edges_copy[row][column] == 0:
+                        # mapping of structuring element with zeros array and image
+                        # numpy.where() iterates over the structuring element bool array
+                        # and for every True it yields corresponding element from the first list (0 == for a black edge pixel)
+                        # and for every False it yields corresponding element from the second list (image_edges_copy pixel)
+                        mapping = np.where(structuring_element,
+                                            np.zeros((structure_height,structure_width)),
+                                            image_edges_copy[row-floor_structure_height:row+floor_structure_height+1,column-floor_structure_width:column+floor_structure_width+1])
+
+                        # if structuring element present in edge image then retain pixel
+                        if np.array_equal(mapping,image_edges_copy[row-floor_structure_height:row+floor_structure_height+1,column-floor_structure_width:column+floor_structure_width+1]):
+                            edge_erosion_temp[row][column] = 0
+                        # else remove pixel
+                        else:
+                            edge_erosion_temp[row][column] = 255
+
+            image_edges_copy = np.copy(edge_erosion_temp) # copy over in preparation for removing another layer
 
         return image_edges_copy

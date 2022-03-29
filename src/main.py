@@ -183,8 +183,9 @@ class Main:
                 smoothed_image = self.point_operations.smooth2dImage(grey_channel, self.filters.gaussian_filter['filter'])
                 image_edges = self.edges.sobel_edge_detection(smoothed_image,threshold=2.0)
                 image_edges_dilation = self.edges.edge_dilation(image_edges,num_layers=1)
+                image_edges_erosion = self.edges.edge_erosion(image_edges_dilation,num_layers=1)
                 self.timing_results.append(time.time() - start_time)
-                self.images.showGrayscaleImages([image_edges, image_edges_dilation], num_rows=1, num_cols=2)
+                self.images.showGrayscaleImages([image_edges,image_edges_dilation,image_edges_erosion], num_rows=2, num_cols=2)
                 self.images.saveImage(image_edges_dilation,path)
         # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
         else:
