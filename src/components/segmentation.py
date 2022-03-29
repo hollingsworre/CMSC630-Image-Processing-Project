@@ -4,7 +4,7 @@ import os
 from numba import jit
 
 
-@jit(nopython=True,cache=True)
+@jit(nopython=True)
 def map_pixels(image_flat,cluster_centers,pixel_mapping_temp,num_cluster_centers,num_image_rows):
     """
     Called from Segmentation.k_means_segmentation. Maps all image pixels to a cluster by taking a 1x3 pixel and
@@ -37,12 +37,13 @@ def map_pixels(image_flat,cluster_centers,pixel_mapping_temp,num_cluster_centers
         pixel_mapping_temp[i] = distances.index(min(distances))
 
 
-@jit(nopython=True,cache=True)
+@jit(nopython=True)
 def recalculate_cluster_centers(image_flat,cluster_centers,pixel_to_cluster_mapping,num_cluster_centers,num_image_rows):
     """
     Called from Segmentation.k_means_segmentation.Recalculate cluster centers by averaging of all pixel values that
     are assigned to the cluster. This cluster to pixel assignment is contained in the pixel_to_cluster_mapping array.
     Cluster centers are then moved to their new centers of gravity. cluster_centers is passed and changed by reference.
+    If a cluster winds up with no pixels assigned to it, then that cluster will be randomly moved to a different location.
 
     Parameters:
     -----------
@@ -71,13 +72,18 @@ def recalculate_cluster_centers(image_flat,cluster_centers,pixel_to_cluster_mapp
                 cluster_sum = cluster_sum + image_flat[j][:]
                 pixel_count = pixel_count + 1
 
-        # Only recalculate cluster center if a pixel is assigned to it (otherwise center will move to [0,0,0])
+        # Only recalculate cluster center if a pixel is assigned to it       
         if pixel_count != 0:
             cluster_average = cluster_sum/pixel_count # get average of pixel values
             cluster_centers[i][:] = cluster_average # move cluster center
+        # If a cluster center has no pixels assigned to it then reinitialize it randomly
+        else:
+            cluster_centers[i][0] = random.randint(0, 255)  # red
+            cluster_centers[i][1] = random.randint(0, 255)  # green
+            cluster_centers[i][2] = random.randint(0, 255)  # blue
 
 
-@jit(nopython=True,cache=True)
+@jit(nopython=True)
 def segment_image(image_flat,cluster_centers,pixel_to_cluster_mapping,num_cluster_centers,num_image_rows):
     """
     Called from Segmentation.k_means_segmentation. Perform pixel assignments to appropriate cluster once 

@@ -23,7 +23,7 @@ class Edges:
 
 
     @staticmethod
-    @jit(nopython=True,cache=True)
+    @jit(nopython=True)
     def sobel_edge_detection(image,threshold = 2.0):
         """
         Perform Sobel edge detection algorithm using improved sobel filter.
@@ -96,7 +96,7 @@ class Edges:
         
 
     @staticmethod
-    @jit(nopython=True,cache=True)
+    @jit(nopython=True)
     def edge_dilation(image_edges, num_layers=1):
         """
         Perform dilation of an edge (black and white, eg 0 or 255) based image.
@@ -149,7 +149,7 @@ class Edges:
 
 
     @staticmethod
-    @jit(nopython=True,cache=True)
+    @jit(nopython=True)
     def edge_erosion(image_edges, num_layers=1):
         """
         Perform edge erosion of an edge based image.

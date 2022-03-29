@@ -30,7 +30,7 @@ class ImagePointOperations:
 
 
     @staticmethod
-    @jit(nopython=True,cache=True)
+    @jit(nopython=True)
     def smooth2dImage(image,weighted_filter):
         """
         2D Image smoothing with a user specified (via .env file) averaging filter (Box or Gaussian). Declared
@@ -81,7 +81,7 @@ class ImagePointOperations:
 
 
     @staticmethod
-    @jit(nopython=True,cache=True)
+    @jit(nopython=True)
     def difference2dImage(image,weighted_filter):
         """
         2D Image difference with a user specified (via .env file) Laplacian filter. Declared
@@ -143,7 +143,7 @@ class ImagePointOperations:
 
 
     @staticmethod
-    @jit(nopython=True,cache=True)
+    @jit(nopython=True)
     def medianOf2dImage(image,weighted_filter):
         """
         2D Image median with a user specified (via .env file) median filter. Declared
