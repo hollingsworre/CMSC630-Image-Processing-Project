@@ -97,7 +97,7 @@ class Images:
             print('Failed to save image! cmap should be gray or rgb')
     
 
-    def getImage(self,image_path):
+    def getImage(self,image_path,color_spectrum='grey'):
         """
         Loads an RGB image into a numpy array and returns it if color_spectrum set to RGB. Else it
         divides the image into its red, green, blue channels. Red, green and blue channels are used
@@ -107,6 +107,8 @@ class Images:
         Parameters:
         -----------
             image_path : the filepath to the image to be opened and parsed into channels
+            color_spectrum (str) : spectrum of image to work on. Defined in .env file or decided on at runtime.
+                                    Defaults to grey as only k-means really requires rgb
 
         Returns:
         --------
@@ -119,15 +121,15 @@ class Images:
         img = plt.imread(image_path) #load the image into a numpy array
 
         # return image as RGB
-        if self.color_spectrum == 'rgb':
+        if color_spectrum == 'rgb':
             return img
 
         channels['red'], channels['green'], channels['blue'] = img[:,:,0], img[:,:,1], img[:,:,2] #separate three layers of the array into their RGB parts
         channels['grey'] = np.rint((0.2989 * channels['red']) + (0.5870 * channels['green']) + (0.1140 * channels['blue'])) #use RGB to grayscale conversion formula
         
         # return requested channel
-        if self.color_spectrum in channels:
-            return channels[self.color_spectrum]
+        if color_spectrum in channels:
+            return channels[color_spectrum]
         # requested channel does not exist so return grey channel
         else:
             return channels['grey']

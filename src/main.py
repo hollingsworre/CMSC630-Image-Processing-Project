@@ -98,7 +98,7 @@ class Main:
         start_time = time.time()
 
         # get channel defined in .env file
-        requested_channel = self.images.getImage(path)
+        requested_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
 
         if kwargs['salt_pepper_noise'] == 'true':
             altered_image = self.noise_functions.addSaltAndPepperNoise(requested_channel)
@@ -153,7 +153,7 @@ class Main:
         if kwargs['create_average_histograms'] == 'true':
             for path in self.images.imagepaths:
                 start_time = time.time()
-                requested_channel = self.images.getImage(path)
+                requested_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
                 self.histogram_functions.createHistogram(requested_channel,image_path=path)
                 self.timing_results.append(time.time() - start_time)
             self.histogram_functions.averageHistogramsByType()
@@ -162,7 +162,7 @@ class Main:
         elif kwargs['k_means'] == 'true':
             for path in self.images.imagepaths:
                 start_time = time.time()
-                image = self.images.getImage(path)
+                image = self.images.getImage(path,color_spectrum='rgb')
                 segmented_image = self.segmentation.k_means_segmentation(image)
                 self.timing_results.append(time.time() - start_time)
                 self.images.saveImage(segmented_image,path,cmap='rgb')
@@ -170,7 +170,7 @@ class Main:
         elif kwargs['histogram_thresholding'] == 'true':
             for path in self.images.imagepaths:
                 start_time = time.time()
-                requested_channel = self.images.getImage(path)
+                requested_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
                 bin_values, bins = self.histogram_functions.createHistogram(requested_channel,image_path=path)
                 segmented_image = self.segmentation.histogram_thresholding_segmentation(requested_channel,bin_values,bins)
                 self.timing_results.append(time.time() - start_time)
@@ -178,7 +178,7 @@ class Main:
         elif kwargs['sobel_edge_detection'] == 'true':
             for path in self.images.imagepaths:
                 start_time = time.time()
-                grey_channel = self.images.getImage(path)
+                grey_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
                 # Smooth image with gaussian filter before doing edge detection
                 smoothed_image = self.point_operations.smooth2dImage(grey_channel, self.filters.gaussian_filter['filter'])
                 image_edges = self.edges.edge_detection(smoothed_image,detection_type='improved_sobel',threshold=self.edges.edge_detection_threshold)
