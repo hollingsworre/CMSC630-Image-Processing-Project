@@ -181,7 +181,7 @@ class Main:
                 grey_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
                 # Smooth image with gaussian filter before doing edge detection
                 smoothed_image = self.point_operations.smooth2dImage(grey_channel, self.filters.gaussian_filter['filter'])
-                image_edges = self.edges.edge_detection(smoothed_image,detection_type='improved_sobel',threshold=self.edges.edge_detection_threshold)
+                image_edges = self.edges.edge_detection(smoothed_image,detection_type='sobel',threshold=self.edges.edge_detection_threshold)
                 #image_edges2 = self.edges.edge_detection(smoothed_image,detection_type='sobel',threshold=self.edges.edge_detection_threshold)
                 #image_edges3 = self.edges.edge_detection(smoothed_image,detection_type='prewitt',threshold=self.edges.edge_detection_threshold)
                 image_edges_erosion = self.edges.edge_erosion(image_edges,num_layers=1,structuring_element=self.filters.edge_erosion_element)
@@ -231,10 +231,9 @@ if __name__ == "__main__":
                             median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower(),
                             k_means=os.getenv('RUN_K_MEANS_SEGMENTATION').lower(),
                             histogram_thresholding=os.getenv('RUN_HISTOGRAM_SEGMENTATION').lower(),
-                            sobel_edge_detection = os.getenv('RUN_EDGE_DETECTION').lower())
+                            sobel_edge_detection = os.getenv('RUN_SOBEL_EDGE_DETECTION').lower())
 
-    # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
-    # and staying open causes the timer to continue incrementing. Works otherwise.
+    
     print("\n--- Batch Processing Time: %s seconds ---" % (time.time() - start_time))
     
     average_processing_time = sum(composite.timing_results)/len(composite.timing_results)
@@ -243,6 +242,8 @@ if __name__ == "__main__":
     if composite.msqe_results:
         average_msqe = sum(composite.msqe_results)/len(composite.msqe_results)
         print("--- Average MSQE: %s ---\n" % (average_msqe))
+
+    function_list = os.getenv('FUNCTION_LIST')
 
     # display up to four images at once
     #composite.images.showGrayscaleImages([salt_pepper_noise_image, filtered_sp_image], num_rows=1, num_cols=2)
