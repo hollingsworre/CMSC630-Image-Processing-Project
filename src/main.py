@@ -181,12 +181,15 @@ class Main:
                 grey_channel = self.images.getImage(path)
                 # Smooth image with gaussian filter before doing edge detection
                 smoothed_image = self.point_operations.smooth2dImage(grey_channel, self.filters.gaussian_filter['filter'])
-                image_edges = self.edges.sobel_edge_detection(smoothed_image,threshold=2.0)
-                image_edges_dilation = self.edges.edge_dilation(image_edges,num_layers=1)
-                image_edges_erosion = self.edges.edge_erosion(image_edges_dilation,num_layers=1)
+                image_edges = self.edges.edge_detection(smoothed_image,detection_type='improved_sobel',threshold=self.edges.edge_detection_threshold)
+                #image_edges2 = self.edges.edge_detection(smoothed_image,detection_type='sobel',threshold=self.edges.edge_detection_threshold)
+                #image_edges3 = self.edges.edge_detection(smoothed_image,detection_type='prewitt',threshold=self.edges.edge_detection_threshold)
+                image_edges_erosion = self.edges.edge_erosion(image_edges,num_layers=1,structuring_element=self.filters.edge_erosion_element)
+                image_edges_dilation = self.edges.edge_dilation(image_edges_erosion,num_layers=1,structuring_element=self.filters.edge_dilation_element)
+                #image_edges_erosion = self.edges.edge_erosion(image_edges_dilation,num_layers=1)
                 self.timing_results.append(time.time() - start_time)
-                self.images.showGrayscaleImages([image_edges,image_edges_dilation,image_edges_erosion], num_rows=2, num_cols=2)
-                self.images.saveImage(image_edges_dilation,path)
+                self.images.showGrayscaleImages([image_edges,image_edges_erosion,image_edges_dilation], num_rows=2, num_cols=2)
+                #self.images.saveImage(image_edges_dilation,path)
         # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
         else:
             # Create your process pool equal to the number of cpus detected on your machine
@@ -226,9 +229,9 @@ if __name__ == "__main__":
                             gaussian_smoothing=os.getenv('RUN_LINEAR_GAUSSIAN_SMOOTHING').lower(),
                             laplacian_diff=os.getenv('RUN_LINEAR_LAPLACIAN_DIFFERENCE').lower(),
                             median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower(),
-                            k_means=os.getenv('K_MEANS_SEGMENTATION').lower(),
-                            histogram_thresholding=os.getenv('HISTOGRAM_THRESHOLDING').lower(),
-                            sobel_edge_detection = os.getenv('RUN_SOBEL_EDGE_DETECTION').lower())
+                            k_means=os.getenv('RUN_K_MEANS_SEGMENTATION').lower(),
+                            histogram_thresholding=os.getenv('RUN_HISTOGRAM_SEGMENTATION').lower(),
+                            sobel_edge_detection = os.getenv('RUN_EDGE_DETECTION').lower())
 
     # TODO: Batch processing time not correct for Average_Histogram operations as the plot opening
     # and staying open causes the timer to continue incrementing. Works otherwise.

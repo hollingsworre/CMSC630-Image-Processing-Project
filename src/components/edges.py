@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 import math
+import os
 
 
 class Edges:
@@ -10,36 +11,67 @@ class Edges:
     Attributes
     ----------
 
+    edge_detection_threshold (float) : threshold for marking as an edge. Defined in .env file
     
     
     Methods
     -------
 
-    
+    edge_detection(image,detection_type='improved_sobel',threshold = 2.0)
+        Perform Sobel edge detection, improved Sobel edge detection, or Prewitt detection algorithms.
+
+    edge_dilation(image_edges, num_layers=1, structuring_element=np.array([]))
+        Perform dilation of an edge (black and white, eg 0 or 255) based image. Any size structuring element of
+        boolean values can be defined. The True in the matrix defines the places to apply the element.
+
+    edge_erosion(image_edges, num_layers=1, structuring_element=np.array([]))
+        Perform edge erosion of an edge based image using. Any size structuring element of
+        boolean values can be defined. The True in the matrix defines the places to apply the element.    
     """
 
     def __init__(self):
-        pass
+        self.edge_detection_threshold = float(os.getenv('EDGE_DETECTION_THRESHOLD'))
 
 
     @staticmethod
     @jit(nopython=True)
-    def sobel_edge_detection(image,threshold = 2.0):
+    def edge_detection(image,detection_type,threshold = 2.0):
         """
         Perform Sobel edge detection algorithm using improved sobel filter.
+
+        Parameters:
+        -----------
+
+            image (numpy array) : 2D greyscale image to perform edge detection on
+            detection_type (str) : type of edge dection to perform. Should be one of 'improved_sobel', 'sobel', 'prewitt'
+            threshold (float) : The minimum magnitude required to be marked as an edge
+
+        Returns:
+        --------
+
+            gradient_edges (numpy array) : the image with edges marked
         """
 
-        # x direction gradient filter
-        Hx = np.array([[-3,0,3],
-                       [-10,0,10],
-                       [-3,0,3]])
-
-        # y direction gradient filter
-        Hy = np.array([[-3,-10,-3],
-                       [0,0,0],
-                       [3,10,3]])
-              
-        sobel_division_factor = 32 # division factor for sobel edge detection
+        if detection_type == 'improved_sobel':
+            # x direction gradient filter
+            Hx = np.array([[-3,0,3],[-10,0,10],[-3,0,3]])
+            # y direction gradient filter
+            Hy = np.array([[-3,-10,-3],[0,0,0],[3,10,3]])              
+            division_factor = 32 # division factor for improved sobel edge detection
+        elif detection_type == 'sobel':
+            # x direction gradient filter
+            Hx = np.array([[-1,0,1],[-2,0,2],[-1,0,1]])
+            # y direction gradient filter
+            Hy = np.array([[-1,-2,-1],[0,0,0],[1,2,1]])              
+            division_factor = 8 # division factor for sobel edge detection
+        elif detection_type == 'prewitt':
+            # x direction gradient filter
+            Hx = np.array([[-1,0,1],[-1,0,1],[-1,0,1]])
+            # y direction gradient filter
+            Hy = np.array([[-1,-1,-1],[0,0,0],[1,1,1]])              
+            division_factor = 6 # division factor for prewitt edge detection
+        else:
+            return None
 
         threshold = threshold # threshold for gradient magnitude to be marked as an edge   
 
@@ -59,9 +91,9 @@ class Edges:
                 y_image_copy[row][column] = np.sum(Hy*image[row-1:row+2,column-1:column+2])
 
         # divide by the division factor
-        x_image_copy = x_image_copy/sobel_division_factor
+        x_image_copy = x_image_copy/division_factor
         # divide by the division factor
-        y_image_copy = y_image_copy/sobel_division_factor
+        y_image_copy = y_image_copy/division_factor
 
         # Calculate gradient magnitude from x and y derivatives
         gradient_magnitude = np.sqrt(np.square(x_image_copy) + np.square(y_image_copy))
@@ -75,19 +107,8 @@ class Edges:
             for column in range(2,width-2):
                 hot_point = gradient_magnitude[row][column] # pixel being evaluated
                 # check x direction maxima
-                if max(gradient_magnitude[row-1][column],hot_point,gradient_magnitude[row+1][column]) == hot_point:
-                    # if maxima is greater than threshold then mark as edge
-                    if hot_point > threshold:
-                        gradient_edges[row][column] = 0 # mark as an edge
-                    else:
-                        gradient_edges[row][column] = 255 # mark as not an edge                    
-                # check y direction maxima
-                elif max(gradient_magnitude[row][column-1],hot_point,gradient_magnitude[row][column+1]) == hot_point:
-                    # if maxima is greater than threshold then mark as edge
-                    if hot_point > threshold:
-                        gradient_edges[row][column] = 0 # mark as an edge
-                    else:
-                        gradient_edges[row][column] = 255 # mark as not an edge
+                if hot_point >= threshold:
+                    gradient_edges[row][column] = 0 # mark as an edge
                 else:
                     gradient_edges[row][column] = 255 # mark as not an edge
                     
@@ -97,25 +118,25 @@ class Edges:
 
     @staticmethod
     @jit(nopython=True)
-    def edge_dilation(image_edges, num_layers=1):
+    def edge_dilation(image_edges, num_layers=1, structuring_element=np.array([[False]])):
         """
-        Perform dilation of an edge (black and white, eg 0 or 255) based image.
+        Perform dilation of an edge (black and white, eg 0 or 255) based image. Any size structuring element of
+        boolean values can be defined. The True in the matrix defines the places to apply the element.
+
+        Parameters:
+        -----------
+
+            image_edges (numpy_array) : 2D images of edges received from self.sobel_edge_detection()
+            num_layers (int) : the number of times to apply the structuring element to the edges
+            structuring_element (boolean numpy_array) : 2D array of boolean values which defines the
+                                                        structuring element to perform dilation with.
+                                                        Should be defined in the .env file
+
+        Returns:
+        --------
+
+            image_edges_copy (numpy_array) : the dilated edge image
         """
-
-        # Quasi-Disk shaped structuring elements                                     
-        _structuring_element = np.array([[False,True,True,True,False],
-                                        [True,True,True,True,True],
-                                        [True,True,True,True,True],
-                                        [True,True,True,True,True],
-                                        [False,True,True,True,False]])
-
-        structuring_element = np.array([[True,True,True],
-                                        [True,True,True],
-                                        [True,True,True]])
-
-        __structuring_element = np.array([[False,True,False],
-                                        [True,True,True],
-                                        [False,True,False]])
 
         structure_height, structure_width = structuring_element.shape
         floor_structure_height = math.floor(structure_height/2)
@@ -150,14 +171,24 @@ class Edges:
 
     @staticmethod
     @jit(nopython=True)
-    def edge_erosion(image_edges, num_layers=1):
+    def edge_erosion(image_edges, num_layers=1, structuring_element=np.array([[False]])):
         """
-        Perform edge erosion of an edge based image.
-        """
+        Perform edge erosion of an edge based image using. Any size structuring element of
+        boolean values can be defined. The True in the matrix defines the places to apply the element.
 
-        structuring_element = np.array([[False,True,False],
-                                        [True,True,True],
-                                        [False,True,False]])
+        Parameters:
+        -----------
+
+            image_edges (numpy_array) : 2D images of edges
+            num_layers (int) : the number of times to apply the structuring element to the edges
+            structuring_element (boolean numpy_array) : 2D array of boolean values which defines the
+                                                        structuring element to perform erosion with
+
+        Returns:
+        --------
+
+            image_edges_copy (numpy_array) : the eroded edge image
+        """
 
         structure_height, structure_width = structuring_element.shape
         floor_structure_height = math.floor(structure_height/2)

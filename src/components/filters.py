@@ -1,11 +1,12 @@
+from xmlrpc.client import Boolean
 import numpy as np
 import os
 
 
 class Filters:
     """
-    Component class for all filters to be worked with. When this class is instantiated the filters
-    will be parsed from the .env file and separated into row and column vectors if possible.
+    Component class for all filters/structuring elements to be worked with. When this class is instantiated the
+    elements will be parsed from the .env file and separated into row and column vectors if possible.
     If they can not be separated then the row_vector and column_vector values of the filter
     dicts will be None
 
@@ -44,6 +45,10 @@ class Filters:
                 'row_vector': None(if not separable) or numpy array(if separable)
             }
 
+    edge_dilation_element : structuring element used for edge dilation
+
+    edge_erosion_element : structuring element used for edge erosion
+
     Methods
     -------
 
@@ -71,9 +76,11 @@ class Filters:
         self.median_filter = self.separateFilter({'filter':self.getFilterMatrix(os.getenv('MEDIAN_FILTER').splitlines()),
                                                     'column_vector':None,
                                                     'row_vector':None}) #get median filter
+        self.edge_dilation_element = self.getFilterMatrix(os.getenv('EDGE_DILATION_STRUCTURING_ELEMENT').splitlines(),type=Boolean)
+        self.edge_erosion_element = self.getFilterMatrix(os.getenv('EDGE_EROSION_STRUCTURING_ELEMENT').splitlines(),type=Boolean)
 
 
-    def getFilterMatrix(self,filter):
+    def getFilterMatrix(self,filter,type=int):
         """
         Gets filter matrix from that which is defined in the .env file and converts the string 
         values into an appropriate numpy array.
@@ -81,6 +88,7 @@ class Filters:
         Parameters:
         -----------
             filter(list): list representing the rows of the filter and gotten from the .env file
+            type : data type to cast the matrix to. Usually int for filters and Boolean for structuring elements
 
         Returns:
         --------
@@ -91,7 +99,7 @@ class Filters:
         # Each list item (other than the first) represents a row of the filter matrix    
         for row in range(1, len(filter)):
             filter_list = filter[row].split(',')
-            array.append(list(map(int,filter_list))) #build 2D array
+            array.append(list(map(type,filter_list))) #build 2D array
 
         # TODO: width and height of filter should both be odd values (probably should check for this)
         return np.asarray(array) # return as numpy array

@@ -99,7 +99,7 @@ class Images:
 
     def getImage(self,image_path):
         """
-        Loads an RGB image into a numpy array and returns it if color_spectrume set to RGB. Else it
+        Loads an RGB image into a numpy array and returns it if color_spectrum set to RGB. Else it
         divides the image into its red, green, blue channels. Red, green and blue channels are used
         to produce a greyscale channel as well using the formula
         grey_channel = .2989*red + .587*green + .114*blue
