@@ -31,6 +31,8 @@ class Edges:
 
     def __init__(self):
         self.edge_detection_threshold = float(os.getenv('EDGE_DETECTION_THRESHOLD'))
+        self.num_erosion_layers = int(os.getenv('NUM_EROSION_LAYERS'))
+        self.num_dilation_layers = int(os.getenv('NUM_DILATION_LAYERS'))
 
 
     @staticmethod

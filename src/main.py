@@ -36,12 +36,11 @@ class Main:
             Callback method for the process pool started up in self.run_batch_mode().
             Appends the processing time for the individual process into self.timing_results.
 
-        parallelModel(self, path, kwargs)
+        parallelModel(self, path, function_list)
             Method for performing image operations which can be parallelized.
 
-        run_batch_mode(self, **kwargs)
-            Batch mode function. All kwargs arguments from the .env file should be converted to lower case
-            before being passed into this function. If user is requesting an averaged histogram operation then
+        run_batch_mode(self)
+            Batch mode function. If user is requesting an averaged histogram operation then
             this will be performed synchronously by a single process. Otherwise a process pool equal to the 
             number of cpus on the machine will be spun up and the filepaths will be distributed to the processes
             for parallelization. Otherwise it takes a LONG time to process any significant number of images.
@@ -58,6 +57,21 @@ class Main:
         self.edges = None
         self.timing_results = []
         self.msqe_results = []
+        self.equalization_msqe = 0
+        self.function_dictionary = {'1':self.add_salt_pepper_noise,
+                                    '2':self.add_gaussian_noise,
+                                    '3':self.histogram_equalization,
+                                    '4':self.histogram_quantization,
+                                    '5':self.box_smoothing,
+                                    '6':self.gaussian_smoothing,
+                                    '7':self.lapacian_difference,
+                                    '8':self.median_smoothing,
+                                    '9':self.create_average_histograms,
+                                    '10':self.k_means_segmentation,
+                                    '11':self.histogram_thresholding_segmentation,
+                                    '12':self.edge_erosion,
+                                    '13':self.edge_dilation,
+                                    '14':self.edge_detection}
 
 
     def save_data(self, result):
@@ -78,7 +92,59 @@ class Main:
             self.msqe_results.append(result[1])
 
 
-    def parallelModel(self, path, kwargs):
+    def add_salt_pepper_noise(self,image):
+        return self.noise_functions.addSaltAndPepperNoise(image)
+
+    def add_gaussian_noise(self,image):
+        return self.noise_functions.addGaussianNoise(image)
+
+    def histogram_equalization(self,image):
+        return self.histogram_functions.histogramEqualization(image)
+
+    def histogram_quantization(self,image):
+        altered_image = self.images.quantizeImage(image)
+        decompressed_image = self.images.decompressImage(altered_image)
+        self.equalization_msqe = self.images.quantizationError(image, decompressed_image)
+
+    def box_smoothing(self,image):
+        return self.point_operations.smooth2dImage(image, self.filters.box_filter['filter'])
+
+    def gaussian_smoothing(self,image):
+        return self.point_operations.smooth2dImage(image, self.filters.gaussian_filter['filter'])
+
+    def lapacian_difference(self,image):
+        return self.point_operations.difference2dImage(image, self.filters.laplacian_filter['filter'])
+
+    def median_smoothing(self,image):
+        return self.point_operations.medianOf2dImage(image, self.filters.median_filter['filter'])
+
+    def create_average_histograms(self):
+        for path in self.images.imagepaths:
+            start_time = time.time()
+            image = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
+            self.histogram_functions.createHistogram(image,image_path=path)
+            self.timing_results.append(time.time() - start_time)
+        self.histogram_functions.averageHistogramsByType()
+        self.histogram_functions.plotAveragedHistogramsByType()
+
+    def k_means_segmentation(self,image):
+        return self.segmentation.k_means_segmentation(image)
+
+    def histogram_thresholding_segmentation(self,image):
+        bin_values, bins = self.histogram_functions.createHistogram(image)
+        return self.segmentation.histogram_thresholding_segmentation(image,bin_values,bins)
+
+    def edge_detection(self,image,detection_type):
+        return self.edges.edge_detection(image,detection_type=detection_type,threshold=self.edges.edge_detection_threshold)
+
+    def edge_erosion(self,image):
+        return self.edges.edge_erosion(image,num_layers=self.edges.num_erosion_layers,structuring_element=self.filters.edge_erosion_element)
+
+    def edge_dilation(self,image):
+        return self.edges.edge_dilation(image,num_layers=self.edges.num_dilation_layers,structuring_element=self.filters.edge_dilation_element)
+
+
+    def parallelModel(self, path, function_list):
         """
         Method for performing image operations which can be parallelized.
 
@@ -93,110 +159,75 @@ class Main:
             equalization_msqe(float) : the msqe for the quantization
         """
 
-        equalization_msqe = 0
         current_process = multiprocessing.Process().name
         start_time = time.time()
 
         # get channel defined in .env file
-        requested_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
+        image = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
 
-        if kwargs['salt_pepper_noise'] == 'true':
-            altered_image = self.noise_functions.addSaltAndPepperNoise(requested_channel)
-        elif kwargs['gaussian_noise'] == 'true':
-            altered_image = self.noise_functions.addGaussianNoise(requested_channel)
-        elif kwargs['equalization'] == 'true':
-            altered_image = self.histogram_functions.histogramEqualization(requested_channel)
-        elif kwargs['quantization'] == 'true':
-            altered_image = self.images.quantizeImage(requested_channel)
-            decompressed_image = self.images.decompressImage(altered_image)
-            equalization_msqe = self.images.quantizationError(requested_channel, decompressed_image)
-        elif kwargs['box_smoothing'] == 'true':
-            altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.box_filter['filter'])
-            print(f"{current_process} : done box")
-        elif kwargs['gaussian_smoothing'] == 'true':
-            altered_image = self.point_operations.smooth2dImage(requested_channel, self.filters.gaussian_filter['filter'])
-            print(f"{current_process} : done gaussian")
-        elif kwargs['laplacian_diff'] == 'true':
-            altered_image = self.point_operations.difference2dImage(requested_channel, self.filters.laplacian_filter['filter'])
-            print(f"{current_process} : done difference")
-        elif kwargs['median_smoothing'] == 'true':
-            altered_image = self.point_operations.medianOf2dImage(requested_channel, self.filters.median_filter['filter'])
-            print(f"{current_process} : done median")
-        
-        if 'altered_image' in locals():
-            self.images.saveImage(altered_image,path) # save image as grayscale
+        # apply all requested functions
+        for i in function_list:
+            # If k-means then it needs to be color image
+            if i in ['10']:
+                # get image again if it is not rgb (K-means must be done in color)
+                if len(image.shape) != 3:
+                    image = self.images.getImage(path,color_spectrum='rgb')
+                image = self.function_dictionary[i](image)
+            # Could be one of three edge detection functions
+            elif i in ['14','15','16']:
+                # if k-means was the previous function then image will be 3d and
+                # it needs to be converted to greyscale
+                if len(image.shape) == 3:
+                    image = self.images.rgbToGrayscale(image)
+                mapping = {'14':'sobel','15':'improved_sobel','16':'prewitt'}
+                image = self.function_dictionary['14'](image,mapping[i])
+                #self.images.showGrayscaleImages([image], num_rows=1, num_cols=1)
+            else:
+                # if k-means was the previous function then image will be 3d and
+                # it needs to be converted to greyscale
+                if len(image.shape) == 3:
+                    image = self.images.rgbToGrayscale(image)
+                image = self.function_dictionary[i](image)
+                #self.images.showGrayscaleImages([image], num_rows=1, num_cols=1)
+
+        if 'image' in locals():
+            self.images.saveImage(image,path) # save image as grayscale
+
+        print(f"{current_process} : done")
 
         # return the image processing time and equalization_msqe
-        return [time.time() - start_time, equalization_msqe]
+        return [time.time() - start_time, self.equalization_msqe]
 
 
-    def run_batch_mode(self, **kwargs):
+    def run_batch_mode(self):
         """
-        Batch mode function. All kwargs arguments from the .env file should be converted to lower case
-        before being passed into this function. If user is requesting an averaged histogram operation then
+        Batch mode function. If user is requesting an averaged histogram operation then
         this will be performed synchronously by a single process. Otherwise a process pool equal to the 
         number of cpus on the machine will be spun up and the filepaths will be distributed to the processes
         for parallelization. Otherwise it takes a LONG time to process any significant number of images.
 
         Parameters:
         -----------
-            **kwargs : the requested functions to be run from the .env file
+            None
 
         Returns:
         --------
             None
         """
 
-        # If create_average_histograms, then just perform it synchronously for simplicity's sake.
-        # Every image is looped through, histograms are totaled for each image type and then at
-        # the end they are averaged and plotted. A lot easier than worrying about broadcasting between processes.
-        if kwargs['create_average_histograms'] == 'true':
-            for path in self.images.imagepaths:
-                start_time = time.time()
-                requested_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
-                self.histogram_functions.createHistogram(requested_channel,image_path=path)
-                self.timing_results.append(time.time() - start_time)
-            self.histogram_functions.averageHistogramsByType()
-            self.histogram_functions.plotAveragedHistogramsByType()
-        # segment image synchronously
-        elif kwargs['k_means'] == 'true':
-            for path in self.images.imagepaths:
-                start_time = time.time()
-                image = self.images.getImage(path,color_spectrum='rgb')
-                segmented_image = self.segmentation.k_means_segmentation(image)
-                self.timing_results.append(time.time() - start_time)
-                self.images.saveImage(segmented_image,path,cmap='rgb')
-        # segment image synchronously
-        elif kwargs['histogram_thresholding'] == 'true':
-            for path in self.images.imagepaths:
-                start_time = time.time()
-                requested_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
-                bin_values, bins = self.histogram_functions.createHistogram(requested_channel,image_path=path)
-                segmented_image = self.segmentation.histogram_thresholding_segmentation(requested_channel,bin_values,bins)
-                self.timing_results.append(time.time() - start_time)
-                self.images.saveImage(segmented_image,path)
-        elif kwargs['sobel_edge_detection'] == 'true':
-            for path in self.images.imagepaths:
-                start_time = time.time()
-                grey_channel = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
-                # Smooth image with gaussian filter before doing edge detection
-                smoothed_image = self.point_operations.smooth2dImage(grey_channel, self.filters.gaussian_filter['filter'])
-                image_edges = self.edges.edge_detection(smoothed_image,detection_type='sobel',threshold=self.edges.edge_detection_threshold)
-                #image_edges2 = self.edges.edge_detection(smoothed_image,detection_type='sobel',threshold=self.edges.edge_detection_threshold)
-                #image_edges3 = self.edges.edge_detection(smoothed_image,detection_type='prewitt',threshold=self.edges.edge_detection_threshold)
-                image_edges_erosion = self.edges.edge_erosion(image_edges,num_layers=1,structuring_element=self.filters.edge_erosion_element)
-                image_edges_dilation = self.edges.edge_dilation(image_edges_erosion,num_layers=1,structuring_element=self.filters.edge_dilation_element)
-                #image_edges_erosion = self.edges.edge_erosion(image_edges_dilation,num_layers=1)
-                self.timing_results.append(time.time() - start_time)
-                self.images.showGrayscaleImages([image_edges,image_edges_erosion,image_edges_dilation], num_rows=2, num_cols=2)
-                #self.images.saveImage(image_edges_dilation,path)
-        # else, if any other operation is requested then do it in parallel asynchronously for speed's sake
+        # retrieve list of functions to run on batch from .env file
+        function_list = os.getenv('FUNCTION_LIST').split(",")
+        function_list = [item.strip() for item in function_list] # strip out any whitespace
+
+        if '9' in function_list:
+            print('Averaging histograms and exiting. Do not include this function if you wish to run any others!')
+            self.function_dictionary['9']()
         else:
             # Create your process pool equal to the number of cpus detected on your machine
             pool = multiprocessing.Pool(os.cpu_count())
             # Use imagepaths iterable to dispatch paths to the process pool
             # Callback is used for storing the time of each image operation for final results at the end
-            _ = [pool.apply_async(self.parallelModel, callback=self.save_data, args=(path, kwargs)) for path in self.images.imagepaths]
+            _ = [pool.apply_async(self.parallelModel, callback=self.save_data, args=(path,function_list)) for path in self.images.imagepaths]
             pool.close()
             pool.join()
 
@@ -219,21 +250,8 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    # Pass in environment variables and convert the strings to lower for case insensitive comparisons
-    composite.run_batch_mode(salt_pepper_noise=os.getenv('ADD_SALT_AND_PEPPER_NOISE').lower(),
-                            gaussian_noise=os.getenv('ADD_GAUSSIAN_NOISE').lower(),
-                            create_average_histograms=os.getenv('CREATE_AVERAGE_HISTOGRAMS').lower(),
-                            equalization=os.getenv('RUN_HISTOGRAM_EQUALIZATION').lower(),
-                            quantization=os.getenv('RUN_IMAGE_QUANTIZATION').lower(),
-                            box_smoothing=os.getenv('RUN_LINEAR_BOX_SMOOTHING').lower(),
-                            gaussian_smoothing=os.getenv('RUN_LINEAR_GAUSSIAN_SMOOTHING').lower(),
-                            laplacian_diff=os.getenv('RUN_LINEAR_LAPLACIAN_DIFFERENCE').lower(),
-                            median_smoothing=os.getenv('RUN_MEDIAN_SMOOTHING').lower(),
-                            k_means=os.getenv('RUN_K_MEANS_SEGMENTATION').lower(),
-                            histogram_thresholding=os.getenv('RUN_HISTOGRAM_SEGMENTATION').lower(),
-                            sobel_edge_detection = os.getenv('RUN_SOBEL_EDGE_DETECTION').lower())
+    composite.run_batch_mode()
 
-    
     print("\n--- Batch Processing Time: %s seconds ---" % (time.time() - start_time))
     
     average_processing_time = sum(composite.timing_results)/len(composite.timing_results)
@@ -241,9 +259,7 @@ if __name__ == "__main__":
     
     if composite.msqe_results:
         average_msqe = sum(composite.msqe_results)/len(composite.msqe_results)
-        print("--- Average MSQE: %s ---\n" % (average_msqe))
-
-    function_list = os.getenv('FUNCTION_LIST')
+        print("--- Average MSQE: %s ---\n" % (average_msqe))  
 
     # display up to four images at once
     #composite.images.showGrayscaleImages([salt_pepper_noise_image, filtered_sp_image], num_rows=1, num_cols=2)

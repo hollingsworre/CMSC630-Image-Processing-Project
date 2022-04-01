@@ -25,8 +25,8 @@ class Images:
         Loads .env PATH_TO_IMAGES variable and IMAGE_EXTENSION variable and gets all filepaths contained within that folder and any folder
         below it by file extension
 
-    saveImage(self,image,cmap='gray')
-        Save image as grayscale or color
+    saveImage(self,image)
+        Save image as grayscale or rgb based on image dimensions.
 
     getImage(self,image_path)
         Loads an RGB image into a numpy array and returns it if color_spectrume set to RGB. Else it
@@ -71,15 +71,14 @@ class Images:
         return imagepaths
 
 
-    def saveImage(self,image,image_pathname,cmap='gray'):
+    def saveImage(self,image,image_pathname):
         """
-        Save image as grayscale
+        Save image as grayscale or rgb based on image dimensions.
 
         Parameters:
         -----------
             image (numpy array) : image to be saved
             image_pathname (str) : pathname of image
-            cmap (str) : color map (gray or rgb) to save image as (defaults to gray)
 
         Returns:
         --------
@@ -88,13 +87,13 @@ class Images:
         filename = 'modified_' + os.path.basename(image_pathname)   # extract filename of image from its pathname and add modified_
         path = os.path.join(self.save_images_path, filename)        # join save path and filename
 
-        if cmap == 'gray':
-            plt.imsave(path, image, cmap=cmap, vmin=0, vmax=255) #Save back grayscale image
-        elif cmap == 'rgb':
+        if len(image.shape) == 2:
+            plt.imsave(path, image, cmap='gray', vmin=0, vmax=255) #Save back grayscale image
+        elif len(image.shape) == 3:
             # have to normalize image values between 0 and 1 to save as rgb
             plt.imsave(path, (image - np.min(image)) / (np.max(image) - np.min(image))) #Save back rgb image
         else:
-            print('Failed to save image! cmap should be gray or rgb')
+            print('Failed to save image! Image should be 2D or 3D')
     
 
     def getImage(self,image_path,color_spectrum='grey'):
@@ -134,6 +133,11 @@ class Images:
         else:
             return channels['grey']
 
+
+    def rgbToGrayscale(self,image):
+        """Convert rgb image to grayscale"""
+        return np.asarray(np.rint((0.2989 * image[:,:,0]) + (0.5870 * image[:,:,1]) + (0.1140 * image[:,:,2])),dtype=np.float64)
+        
 
     def showGrayscaleImages(self,images,num_rows=1,num_cols=1):
         """
