@@ -99,4 +99,8 @@ class Noise:
 
         noise = np.random.normal(0, self.gaussian_noise_strength, size = image.shape)
         image_noisy = image + noise
+
+        # Normalize image between 0 and 255
+        image_noisy = 255*((image_noisy-np.min(image_noisy))/(np.max(image_noisy)-np.min(image_noisy)))
+
         return image_noisy 

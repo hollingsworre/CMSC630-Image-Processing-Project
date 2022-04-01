@@ -394,7 +394,7 @@ class Main:
         function_list = [item.strip() for item in function_list] # strip out any whitespace
 
         if '9' in function_list:
-            print('Averaging histograms and exiting. Do not include this function if you wish to run any others!')
+            print('Averaging histograms and exiting. Do not include function 9 if you wish to run any others!')
             self.function_dictionary['9']()
         else:
             # Create your process pool equal to the number of cpus detected on your machine
