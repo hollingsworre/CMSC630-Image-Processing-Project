@@ -12,6 +12,8 @@ class Edges:
     ----------
 
     edge_detection_threshold (float) : threshold for marking as an edge. Defined in .env file
+    num_erosion_layers (int) : number of times to run edge erosion on the image. Defined in .env file
+    num_dilation_layers (int) : number of times to run edge dilation on the image. Defined in .env file
     
     
     Methods

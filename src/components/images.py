@@ -34,11 +34,19 @@ class Images:
         to produce a greyscale channel as well using the formula
         grey_channel = .2989*red + .587*green + .114*blue
 
+    rgbToGrayscale(self,image)
+        Convert rgb image to grayscale
+
     showGrayscaleImages(self,images)
         Display up to four grayscale images at once.
 
     quantizeImage(self,image)
         Image compression into number of bins user specifies in the .env file
+
+    decompressImage(self, compressed_image)
+        Decompress an image that was compressed via the quantizeImage function in this class.
+        In order to decompress, you must know the max - min pixel range (255 here) from the original
+        as well as the number of bins the original image was compressed down into.
 
     quantizationError(self, original_image, uncompressed_image)
         Calculates and returns the MSQE for an uncompressed image in comparison to the original
@@ -135,7 +143,19 @@ class Images:
 
 
     def rgbToGrayscale(self,image):
-        """Convert rgb image to grayscale"""
+        """
+        Convert rgb image to grayscale
+        
+        Parameters:
+        -----------
+
+            image (numpy array) : 3D rgb image
+
+        Returns:
+        --------
+
+            image (numpy array) : 2D grayscale image
+        """
         return np.asarray(np.rint((0.2989 * image[:,:,0]) + (0.5870 * image[:,:,1]) + (0.1140 * image[:,:,2])),dtype=np.float64)
         
 

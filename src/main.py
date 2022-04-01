@@ -27,7 +27,26 @@ class Main:
         edges(obj) : edge detection component plugin instance
         timing_results(list) : list for storing timing results of each image operation
         msqe_results(list) : list for storing msqe numbers per image
+        equalization_msqe(float) : msqe calculation for histogram equalization
+        function_dictionary : Dictionary of function pointers used for batch processing of user specified
+                             functions from the .env::
 
+                                    dict:{
+                                            '1':(function) add_salt_pepper_noise,
+                                            '2':(function) add_gaussian_noise,
+                                            '3':(function) histogram_equalization,
+                                            '4':(function) histogram_quantization,
+                                            '5':(function) box_smoothing,
+                                            '6':(function) gaussian_smoothing,
+                                            '7':(function) lapacian_difference,
+                                            '8':(function) median_smoothing,
+                                            '9':(function) create_average_histograms,
+                                            '10':(function) k_means_segmentation,
+                                            '11':(function) histogram_thresholding_segmentation,
+                                            '12':(function) edge_erosion,
+                                            '13':(function) edge_dilation,
+                                            '14':(function) edge_detection
+                                            }
 
     Methods
     -------
@@ -57,7 +76,6 @@ class Main:
         self.edges = None
         self.timing_results = []
         self.msqe_results = []
-        self.equalization_msqe = 0
         self.function_dictionary = {'1':self.add_salt_pepper_noise,
                                     '2':self.add_gaussian_noise,
                                     '3':self.histogram_equalization,
@@ -93,32 +111,132 @@ class Main:
 
 
     def add_salt_pepper_noise(self,image):
+        """
+        Calls component function for adding of salt and pepper noise.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the altered grayscale image
+        """
         return self.noise_functions.addSaltAndPepperNoise(image)
 
     def add_gaussian_noise(self,image):
+        """
+        Calls componenet function for adding of gaussian noise.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the altered grayscale image
+        """
         return self.noise_functions.addGaussianNoise(image)
 
     def histogram_equalization(self,image):
+        """
+        Calls component function for histogram equalization.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the equalized grayscale image
+        """
         return self.histogram_functions.histogramEqualization(image)
 
     def histogram_quantization(self,image):
+        """
+        Calls component functions for quantization, decompression and quantization error calculations.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            equalization_msqe(float) : msqe after compression and decompression of the grayscale image
+        """
         altered_image = self.images.quantizeImage(image)
         decompressed_image = self.images.decompressImage(altered_image)
-        self.equalization_msqe = self.images.quantizationError(image, decompressed_image)
+        equalization_msqe = self.images.quantizationError(image, decompressed_image)
+        return equalization_msqe
 
     def box_smoothing(self,image):
+        """
+        Calls component function smoothing of an image with a box filter.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the altered grayscale image
+        """
         return self.point_operations.smooth2dImage(image, self.filters.box_filter['filter'])
 
     def gaussian_smoothing(self,image):
+        """
+        Calls component function for smoothing an image with a gaussian filter.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the altered grayscale image
+        """
         return self.point_operations.smooth2dImage(image, self.filters.gaussian_filter['filter'])
 
     def lapacian_difference(self,image):
+        """
+        Calls component function for laplacian difference on an image.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the altered grayscale image
+        """
         return self.point_operations.difference2dImage(image, self.filters.laplacian_filter['filter'])
 
     def median_smoothing(self,image):
+        """
+        Calls component function for median filtering of an image.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the altered grayscale image
+        """
         return self.point_operations.medianOf2dImage(image, self.filters.median_filter['filter'])
 
     def create_average_histograms(self):
+        """
+        Averages all histograms by filetype and then plots them. Runs synchronously on a single thread.
+        
+        Parameters:
+        -----------
+            None
+
+        Returns:
+        --------
+            None
+        """
         for path in self.images.imagepaths:
             start_time = time.time()
             image = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
@@ -128,19 +246,75 @@ class Main:
         self.histogram_functions.plotAveragedHistogramsByType()
 
     def k_means_segmentation(self,image):
+        """
+        Calls component function for k-means segmentation of an rgb image.
+        
+        Parameters:
+        -----------
+            image(numpy 3D array) : rgb image to be segmented
+
+        Returns:
+        --------
+            image(numpy 3D array) : the segmented rgb image
+        """
         return self.segmentation.k_means_segmentation(image)
 
     def histogram_thresholding_segmentation(self,image):
+        """
+        Calls component functions for histogram creation and then segmentation by histogram thresholding.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the segmented grayscale image
+        """
         bin_values, bins = self.histogram_functions.createHistogram(image)
         return self.segmentation.histogram_thresholding_segmentation(image,bin_values,bins)
 
     def edge_detection(self,image,detection_type):
+        """
+        Calls component function for edge detection of a grayscale image.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+            detection_type (str) : type of edge dection to perform. Should be one of 'improved_sobel', 'sobel', 'prewitt'
+
+        Returns:
+        --------
+            image(numpy 2D array) : the image with only edges marked
+        """
         return self.edges.edge_detection(image,detection_type=detection_type,threshold=self.edges.edge_detection_threshold)
 
     def edge_erosion(self,image):
+        """
+        Calls component function for erosion of an edge image.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the edge image with requested layers removed
+        """
         return self.edges.edge_erosion(image,num_layers=self.edges.num_erosion_layers,structuring_element=self.filters.edge_erosion_element)
 
     def edge_dilation(self,image):
+        """
+        Calls component function for dilation of an edge image.
+        
+        Parameters:
+        -----------
+            image(numpy 2D array) : grayscale image to be worked on
+
+        Returns:
+        --------
+            image(numpy 2D array) : the edge image with layers added
+        """
         return self.edges.edge_dilation(image,num_layers=self.edges.num_dilation_layers,structuring_element=self.filters.edge_dilation_element)
 
 
@@ -150,53 +324,53 @@ class Main:
 
         Parameters:
         -----------
-            path(str) : the path of the image
-            kwargs(dict) : the requested functions to be run from the .env file
+            path(str) : The path of the image
+            function_list(list) : List of functions to be run from the .env file. All functions mapped in self.function_dictionary.
 
         Returns:
         --------
-            processing_time(float) : the processing time for the operation
-            equalization_msqe(float) : the msqe for the quantization
-        """
-
+            processing_time(float) : The processing time for the operation
+            equalization_msqe(float) : The msqe for the quantization
+        """        
+        
+        equalization_msqe = 0
         current_process = multiprocessing.Process().name
+        print(f"{current_process} : processing image {path}")
         start_time = time.time()
-
         # get channel defined in .env file
         image = self.images.getImage(path,color_spectrum=self.images.color_spectrum)
 
         # apply all requested functions
-        for i in function_list:
+        for i in function_list:            
+            if i not in ['10']:
+                # if k-means was the previous function then image will be 3d and
+                # it needs to be converted to greyscale
+                if len(image.shape) == 3:
+                    image = self.images.rgbToGrayscale(image)
+
+            # This is histogram quantization and msqe will be returned (not the image)
+            if i in ['4']:              
+                equalization_msqe = self.function_dictionary[i](image)
             # If k-means then it needs to be color image
-            if i in ['10']:
+            elif i in ['10']:
                 # get image again if it is not rgb (K-means must be done in color)
                 if len(image.shape) != 3:
                     image = self.images.getImage(path,color_spectrum='rgb')
                 image = self.function_dictionary[i](image)
             # Could be one of three edge detection functions
             elif i in ['14','15','16']:
-                # if k-means was the previous function then image will be 3d and
-                # it needs to be converted to greyscale
-                if len(image.shape) == 3:
-                    image = self.images.rgbToGrayscale(image)
                 mapping = {'14':'sobel','15':'improved_sobel','16':'prewitt'}
                 image = self.function_dictionary['14'](image,mapping[i])
-                #self.images.showGrayscaleImages([image], num_rows=1, num_cols=1)
             else:
-                # if k-means was the previous function then image will be 3d and
-                # it needs to be converted to greyscale
-                if len(image.shape) == 3:
-                    image = self.images.rgbToGrayscale(image)
                 image = self.function_dictionary[i](image)
-                #self.images.showGrayscaleImages([image], num_rows=1, num_cols=1)
 
         if 'image' in locals():
             self.images.saveImage(image,path) # save image as grayscale
 
-        print(f"{current_process} : done")
+        print(f"{current_process} : done with image {path}")
 
         # return the image processing time and equalization_msqe
-        return [time.time() - start_time, self.equalization_msqe]
+        return [time.time() - start_time, equalization_msqe]
 
 
     def run_batch_mode(self):
