@@ -2,6 +2,9 @@ from dotenv import load_dotenv
 import os
 import time
 import multiprocessing
+import csv
+import numpy as np
+import math
 from components.filters import Filters
 from components.point_operations import ImagePointOperations
 from components.images import Images
@@ -45,7 +48,8 @@ class Main:
                                             '11':(function) histogram_thresholding_segmentation,
                                             '12':(function) edge_erosion,
                                             '13':(function) edge_dilation,
-                                            '14':(function) edge_detection
+                                            '14':(function) edge_detection,
+                                            '17':(function) feature_extraction
                                             }
 
     Methods
@@ -76,6 +80,8 @@ class Main:
         self.edges = None
         self.timing_results = []
         self.msqe_results = []
+        self.feature_fields = ['Nucleus Area','Nucleus Perimeter','Nucleus Roundness','Cell Area','Label']
+        self.feature_rows = []
         self.function_dictionary = {'1':self.add_salt_pepper_noise,
                                     '2':self.add_gaussian_noise,
                                     '3':self.histogram_equalization,
@@ -89,7 +95,8 @@ class Main:
                                     '11':self.histogram_thresholding_segmentation,
                                     '12':self.edge_erosion,
                                     '13':self.edge_dilation,
-                                    '14':self.edge_detection}
+                                    '14':self.edge_detection,
+                                    '17':self.feature_extraction}
 
 
     def save_data(self, result):
@@ -99,7 +106,7 @@ class Main:
 
         Parameters:
         -----------
-            result(array) : [processing time for the process, msqe for the quantization]
+            result(array) : [processing time for the process, msqe for the quantization, feature_list]
 
         Returns:
         --------
@@ -108,6 +115,8 @@ class Main:
         self.timing_results.append(result[0])
         if result[1] != 0:
             self.msqe_results.append(result[1])
+        if result[2]:            
+            self.feature_rows.append(result[2]) # push features and label into csv list
 
 
     def add_salt_pepper_noise(self,image):
@@ -318,6 +327,42 @@ class Main:
         return self.edges.edge_dilation(image,num_layers=self.edges.num_dilation_layers,structuring_element=self.filters.edge_dilation_element)
 
 
+    def feature_extraction(self,image,path):
+        """Extracts features from a segmented greyscale image"""
+
+        features = []   # ['Nucleus Area','Nucleus Perimeter','Nucleus Roundness','Cell Area']
+
+        label_list = ['cyl','inter','let','mod','para','super','svar']
+        image_label = ''
+        # get label
+        for label in label_list:
+            if label in path:
+                image_label = label
+                break
+
+        image_copy = np.copy(image)
+
+        # get image histogram
+        bin_values, _ = self.histogram_functions.createHistogram(image)
+
+        # Ensure image is segmented properly
+        if np.count_nonzero(bin_values) == self.segmentation.num_cluster_centers:
+            pixel_index = np.nonzero(bin_values)[0] # [darkest -> lightest], e.g. nucleus -> cell -> background
+            pixel_count = bin_values[np.nonzero(bin_values)] # get exact pixel counts, e.g. nucleus -> cell -> background
+            nucleus_area = pixel_count[0] # calculate nucleus area
+            cell_area = pixel_count[1] # calculate cell area
+            image_copy[image != pixel_index[0]] = 255 # set everything but the nucleii to white in the image_copy
+            # get the nucleii edges for perimeter calcs
+            nucleus_edges = self.edges.edge_detection(image_copy,detection_type='improved_sobel',threshold=self.edges.edge_detection_threshold) 
+            bin_values, _ = self.histogram_functions.createHistogram(nucleus_edges)  # get nucleus edges histogram
+            edge_pixel_count = bin_values[np.nonzero(bin_values)] # get exact pixel counts, e.g. nucleus_edge -> background
+            nucleus_perimeter = edge_pixel_count[0] # calculate nucleus perimeter
+            nucleus_roundness = (nucleus_perimeter**2)/(4*math.pi*nucleus_area) # calculate nucleus roundness
+            features = [nucleus_area, nucleus_perimeter, nucleus_roundness, cell_area, image_label]
+
+        return features # return original segmented image
+
+
     def parallelModel(self, path, function_list):
         """
         Method for performing image operations which can be parallelized.
@@ -334,6 +379,7 @@ class Main:
         """        
         
         equalization_msqe = 0
+        features = []
         current_process = multiprocessing.Process().name
         print(f"{current_process} : processing image {path}")
         start_time = time.time()
@@ -361,6 +407,9 @@ class Main:
             elif i in ['14','15','16']:
                 mapping = {'14':'sobel','15':'improved_sobel','16':'prewitt'}
                 image = self.function_dictionary['14'](image,mapping[i])
+            # Feature extraction (need to pass in path so label can be created)
+            elif i in ['17']:
+                features = self.function_dictionary[i](image,path)
             else:
                 image = self.function_dictionary[i](image)
 
@@ -370,7 +419,7 @@ class Main:
         print(f"{current_process} : done with image {path}")
 
         # return the image processing time and equalization_msqe
-        return [time.time() - start_time, equalization_msqe]
+        return [time.time() - start_time, equalization_msqe, features]
 
 
     def run_batch_mode(self):
@@ -433,7 +482,14 @@ if __name__ == "__main__":
     
     if composite.msqe_results:
         average_msqe = sum(composite.msqe_results)/len(composite.msqe_results)
-        print("--- Average MSQE: %s ---\n" % (average_msqe))  
+        print("--- Average MSQE: %s ---\n" % (average_msqe))
+
+    # write extracted features to file
+    if composite.feature_rows:
+        with open('datasets\extracted_features.csv', 'w+', newline="") as f:
+            write = csv.writer(f)            
+            write.writerow(composite.feature_fields)
+            write.writerows(composite.feature_rows) 
 
     # display up to four images at once
     #composite.images.showGrayscaleImages([salt_pepper_noise_image, filtered_sp_image], num_rows=1, num_cols=2)

@@ -2,6 +2,7 @@ import numpy as np
 import random
 import os
 from numba import jit
+from math import floor
 
 
 @jit(nopython=True)
@@ -134,6 +135,8 @@ class Segmentation:
 
     def __init__(self):
         self.num_cluster_centers = int(os.getenv('NUM_K_MEANS_CLUSTERS'))
+        self.k_means_max_iterations = int(os.getenv('K_MEANS_MAX_ITERATIONS'))
+        self.histogram_threshold = int(os.getenv('HISTOGRAM_SEGMENTATION_THRESHOLD'))
     
 
     def k_means_segmentation(self,image):
@@ -151,7 +154,13 @@ class Segmentation:
             image (numpy array) : the segmented image as a 3D numpy array
         """
 
+        original_image_height, original_image_width, _ = image.shape
+        mid_row = floor(original_image_height/2)
+        mid_column = floor(original_image_width/2)
         image_copy = np.copy(image) # make copy of image
+
+        # get coordinates of pixels in (x,y)
+        #xy_coords = np.flip(np.column_stack(np.where(image_copy[:,:,0] >= 0)), axis=1)
 
         # reshape the array into 2D matrix of 3 columns with each column representing a color spectrum
         image_flat = np.reshape(image_copy, (image_copy.shape[0] * image_copy.shape[1], image_copy.shape[2]))
@@ -164,23 +173,41 @@ class Segmentation:
         pixel_to_cluster_mapping = np.empty([num_image_rows,1],dtype=np.float64)
         pixel_mapping_temp = np.copy(pixel_to_cluster_mapping) # temp mapping array
 
-        # randomly initialize cluster centers
+        # randomly initialize cluster centers after setting first cluster to central pixel's color
         for i in range(self.num_cluster_centers):
-            cluster_centers[i][0] = random.randint(0, 255)  # red
-            cluster_centers[i][1] = random.randint(0, 255)  # green
-            cluster_centers[i][2] = random.randint(0, 255)  # blue
+            # ensure first cluster finds color of central pixel in image
+            if i == 0:
+                cluster_centers[i][0] = image[mid_row][mid_column][0]  # red
+                cluster_centers[i][1] = image[mid_row][mid_column][1]  # green
+                cluster_centers[i][2] = image[mid_row][mid_column][2]  # blue
+            else:
+                cluster_centers[i][0] = random.randint(0, 255)  # red
+                cluster_centers[i][1] = random.randint(0, 255)  # green
+                cluster_centers[i][2] = random.randint(0, 255)  # blue
         
         pixel_changed_cluster_flag = True
+        iteration = 0
 
-        # Perform K-means segmentation. Loop as long as pixels are being reassigned to clusters.
-        while pixel_changed_cluster_flag:
+        # Perform K-means segmentation. Loop as long as pixels are being reassigned to clusters and max iterations not reached.
+        while pixel_changed_cluster_flag and (iteration != self.k_means_max_iterations):
             # pixel_mapping_temp numpy array passed by reference 
             map_pixels(image_flat,cluster_centers,pixel_mapping_temp,self.num_cluster_centers,num_image_rows)
 
             # Check if any pixels changed clusters
             comparison = pixel_to_cluster_mapping == pixel_mapping_temp        
             if comparison.all():
-                pixel_changed_cluster_flag = False
+                # no pixels changed clusters but need to check if all clusters have pixels assigned to them
+                for i in range(self.num_cluster_centers):
+                    # break if cluster found with no pixels assigned
+                    if i not in pixel_mapping_temp:
+                        pixel_changed_cluster_flag = True
+                        # Randomly reassign cluster which has no pixels
+                        cluster_centers[i][0] = random.randint(0, 255)  # red
+                        cluster_centers[i][1] = random.randint(0, 255)  # green
+                        cluster_centers[i][2] = random.randint(0, 255)  # blue
+                        break   # break out of for loop
+                    else:
+                        pixel_changed_cluster_flag = False
             else:
                 pixel_changed_cluster_flag = True # signal that pixels changed cluster assignments
                 pixel_to_cluster_mapping = np.copy(pixel_mapping_temp) # set mapping to temp mapping
@@ -188,6 +215,8 @@ class Segmentation:
                 # calculate new cluster_centers based on average of pixels assigned to it
                 recalculate_cluster_centers(image_flat,cluster_centers,pixel_to_cluster_mapping,self.num_cluster_centers,num_image_rows)
                 print(cluster_centers)
+
+            iteration = iteration + 1   # keep track of num iterations
 
         # Reassign image pixel values to the cluster centroid values
         segment_image(image_flat,cluster_centers,pixel_to_cluster_mapping,self.num_cluster_centers,num_image_rows)
@@ -212,43 +241,49 @@ class Segmentation:
         """
         num_pixels = image.size # of pixels in the image
         within_group_variance = [] # within group variance list
-        # From 0 to 255
-        for threshold in range(len(bins)-1):
-            p_o = 0
-            p_b = 0
-            mean_o = 0
-            mean_b = 0
-            variance_o = 0
-            variance_b = 0
-            # Calculate mean and variance for o and b at T
-            # From 0 to Threshold
-            for j in range(threshold+1):
-                P_j = bin_values[j]/num_pixels
-                p_o = p_o + P_j
-                # Avoid divide by zero errors
-                if p_o == 0:
-                    mean_o = mean_o + 0
-                    variance_o = variance_o + 0
-                else:
-                    mean_o = mean_o + ((j*P_j)/p_o)
-                    variance_o = variance_o + (((j-mean_o)**2)*P_j/p_o)
 
-            # From Threshold+1 to 255
-            for k in range(threshold+1,len(bins)-1):
-                P_k = bin_values[k]/num_pixels
-                p_b = p_b + P_k
-                if p_b == 0:
-                    mean_b = mean_b + 0
-                    variance_b = variance_b + 0
-                else:
-                    mean_b = mean_b + ((k*P_k)/p_b)
-                    variance_b = variance_b + (((k-mean_b)**2)*P_k/p_b)
-        
-            group_variance = variance_o*p_o + variance_b*p_b
-            within_group_variance.append(group_variance)
+        # segment based on variance
+        if self.histogram_threshold == 0:
+            # From 0 to 255
+            for threshold in range(len(bins)-1):
+                p_o = 0
+                p_b = 0
+                mean_o = 0
+                mean_b = 0
+                variance_o = 0
+                variance_b = 0
+                # Calculate mean and variance for o and b at T
+                # From 0 to Threshold
+                for j in range(threshold+1):
+                    P_j = bin_values[j]/num_pixels
+                    p_o = p_o + P_j
+                    # Avoid divide by zero errors
+                    if p_o == 0:
+                        mean_o = mean_o + 0
+                        variance_o = variance_o + 0
+                    else:
+                        mean_o = mean_o + ((j*P_j)/p_o)
+                        variance_o = variance_o + (((j-mean_o)**2)*P_j/p_o)
 
-        # Get the threshold where segmentation will occur
-        optimum_threshold = within_group_variance.index(min(within_group_variance))
+                # From Threshold+1 to 255
+                for k in range(threshold+1,len(bins)-1):
+                    P_k = bin_values[k]/num_pixels
+                    p_b = p_b + P_k
+                    if p_b == 0:
+                        mean_b = mean_b + 0
+                        variance_b = variance_b + 0
+                    else:
+                        mean_b = mean_b + ((k*P_k)/p_b)
+                        variance_b = variance_b + (((k-mean_b)**2)*P_k/p_b)
+            
+                group_variance = variance_o*p_o + variance_b*p_b
+                within_group_variance.append(group_variance)
+
+            # Get the threshold where segmentation will occur
+            optimum_threshold = within_group_variance.index(min(within_group_variance))
+        # segment based on user specified threshold
+        else:
+            optimum_threshold = self.histogram_threshold
 
         # Flatten the image for segmentation
         image_list = list(image.flatten())
