@@ -21,10 +21,13 @@ The just in time compilation library [Numba](https://numba.readthedocs.io/en/sta
 - *src/components/filters.py*: File containing the component class responsible for creating and maintaining the various imaging filters defined in the .env file.
 - *src/components/histogram.py*: File containing the component class responsible for all histogram based operations.
 - *src/components/images.py*: File containing the component class responsible for loading/saving and converting images into other types.
+- *src/components/knn_classifier.py*: File containing the component class responsible for knn classification.
 - *src/components/noise.py*: File containing the component class responsible for all noise based operations such as adding salt and pepper or gaussian noise to an image.
 - *src/components/point_operations.py*: File containing the component class responsible for all point operations which can be performed on an image.
 - *src/components/segmentation.py*: File containing the component class responsible for all segmentation operations which can be performed on an image.
 - *cell_images_original*: Folder containing the images on which this framework was tested. The image path from which images can be loaded is defined in the .env file.
+- *cell_images_ksegmented*: Folder containing the segmented images from which the features were extracted from for building of the datasets.
+- *datasets*: Folder containing the datasets that were tested on the KNN classifier.
 - *requirements.txt*: Additional Python libraries required to run the project.
 
 ## :nut_and_bolt: Dealing With The Code
