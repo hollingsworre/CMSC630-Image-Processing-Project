@@ -21,12 +21,15 @@ class KNN_Classifer:
         """
         Loads .csv without the header into panda dataframe, shuffles it, converts it to numpy matrix.
         """
-        dataframe = pd.read_csv(csv_path, header=0) # load csv into pandas dataframe
-        shuffled = dataframe.sample(frac=1, random_state=random_state).reset_index() # shuffle dataframe
-        
-        # create a numpy array with the numeric values for input into classifier
-        numpy_array = shuffled.to_numpy()        
-        return numpy_array
+        if os.path.exists(csv_path):
+            dataframe = pd.read_csv(csv_path, header=0) # load csv into pandas dataframe
+            shuffled = dataframe.sample(frac=1, random_state=random_state).reset_index() # shuffle dataframe
+            
+            # create a numpy array with the numeric values for input into classifier
+            numpy_array = shuffled.to_numpy()        
+            return numpy_array
+        else:
+            return None
 
 
     def run_k_fold_knn(self):
