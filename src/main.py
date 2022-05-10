@@ -12,6 +12,7 @@ from components.noise import Noise
 from components.histogram import Histogram
 from components.segmentation import Segmentation
 from components.edges import Edges
+from components.knn_classifier import KNN_Classifer
 
 
 class Main:
@@ -78,6 +79,7 @@ class Main:
         self.histogram_functions = None
         self.segmentation = None
         self.edges = None
+        self.classifier = None
         self.timing_results = []
         self.msqe_results = []
         self.feature_fields = ['Nucleus Area','Nucleus Perimeter','Nucleus Roundness','Cell Area','Label']
@@ -96,7 +98,8 @@ class Main:
                                     '12':self.edge_erosion,
                                     '13':self.edge_dilation,
                                     '14':self.edge_detection,
-                                    '17':self.feature_extraction}
+                                    '17':self.feature_extraction,
+                                    '18':self.train_classifier}
 
 
     def save_data(self, result):
@@ -363,6 +366,13 @@ class Main:
         return features # return original segmented image
 
 
+    def train_classifier(self):
+        """Run knn classification algorithm"""
+        start_time = time.time()
+        self.classifier.run_k_fold_knn()
+        self.timing_results.append(time.time() - start_time)
+
+
     def parallelModel(self, path, function_list):
         """
         Method for performing image operations which can be parallelized.
@@ -445,6 +455,9 @@ class Main:
         if '9' in function_list:
             print('Averaging histograms and exiting. Do not include function 9 if you wish to run any others!')
             self.function_dictionary['9']()
+        elif '18' in function_list:
+            print('Training KNN classifier')
+            self.function_dictionary['18']()
         else:
             # Create your process pool equal to the number of cpus detected on your machine
             pool = multiprocessing.Pool(os.cpu_count())
@@ -470,6 +483,7 @@ if __name__ == "__main__":
     composite.histogram_functions = Histogram()
     composite.segmentation = Segmentation()
     composite.edges = Edges()
+    composite.classifier = KNN_Classifer()
 
     start_time = time.time()
 
