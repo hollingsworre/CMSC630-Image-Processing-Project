@@ -51,6 +51,7 @@ class Main:
                                             '13':(function) edge_dilation,
                                             '14':(function) edge_detection,
                                             '17':(function) feature_extraction
+                                            '18':(function) train_classifier
                                             }
 
     Methods
